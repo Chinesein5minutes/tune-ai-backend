@@ -9,6 +9,10 @@ class IFLYTEK {
   }
 
   async evaluateSpeech(audioData, options) {
+    if (!Buffer.isBuffer(audioData)) {
+      throw new Error("audioData 必須是 Buffer 類型，請確認前端送出的格式");
+    }
+
     const base64Audio = audioData.toString("base64");
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -38,9 +42,15 @@ class IFLYTEK {
         payload,
         { headers }
       );
+      console.log("iFLYTEK 回應：", response.data);
       return response.data;
     } catch (err) {
-      throw new Error(err.response?.data || err.message);
+      console.error("iFLYTEK evaluateSpeech error:", err.response?.data || err.message);
+      throw new Error(
+        typeof err.response?.data === "string"
+          ? err.response.data
+          : JSON.stringify(err.response?.data || { message: err.message })
+      );
     }
   }
 }
