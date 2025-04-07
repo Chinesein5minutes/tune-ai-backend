@@ -21,6 +21,7 @@ const server = app.listen(port, () => {
 
 // 建立 WebSocket Server
 const wss = new WebSocket.Server({ server });
+console.log("✅ WebSocket server is running."); // ✅ 除錯訊息
 
 const iflytekClient = new IFLYTEK({
   appId: process.env.IFLYTEK_APP_ID,
@@ -32,14 +33,16 @@ wss.on('connection', (ws) => {
   console.log('🔌 Client connected');
 
   ws.on('message', async (audioData) => {
+    console.log("🎙️ 收到語音資料，準備送出分析...");
     try {
       const result = await iflytekClient.evaluateSpeech(audioData, {
         language: 'zh_cn',
         category: 'read_sentence',
       });
+      console.log("📤 已送出語音分析回應");
       ws.send(JSON.stringify(result));
     } catch (error) {
-      console.error('❌ Error evaluating speech:', error.message);
+      console.error('❌ 語音分析錯誤:', error.message);
       ws.send(JSON.stringify({ error: error.message }));
     }
   });
