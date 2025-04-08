@@ -1,4 +1,3 @@
-// server.js
 process.on('beforeExit', (code) => {
   console.log(`⚠️ process beforeExit event with code: ${code}`);
 });
@@ -24,7 +23,7 @@ app.get('/health', (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-const server = app.listen(port, () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${port}`);
 });
 
@@ -70,5 +69,3 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 console.log("🟢 Server 啟動完畢，等待連線中...");
-
-// ✅
