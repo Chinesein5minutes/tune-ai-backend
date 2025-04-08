@@ -14,7 +14,6 @@ class IFLYTEK {
     }
 
     const base64Audio = audioData.toString("base64");
-
     const timestamp = Math.floor(Date.now() / 1000);
     const param = {
       engine_type: "ise_general",
@@ -25,6 +24,13 @@ class IFLYTEK {
 
     const xParam = Buffer.from(JSON.stringify(param)).toString("base64");
     const checksum = crypto.MD5(this.apiKey + timestamp + xParam).toString();
+
+    console.log("\u2728 Debug iFLYTEK Header 組成：");
+    console.log("X-Appid:", this.appId);
+    console.log("X-CurTime:", timestamp);
+    console.log("X-Param:", xParam);
+    console.log("X-CheckSum 組成字串:", this.apiKey + timestamp + xParam);
+    console.log("X-CheckSum:", checksum);
 
     const headers = {
       "X-Appid": this.appId,
@@ -42,7 +48,7 @@ class IFLYTEK {
         payload,
         { headers }
       );
-      console.log("iFLYTEK 回應：", response.data);
+      console.log("iFLYTEK \u56de\u61c9：", response.data);
       return response.data;
     } catch (err) {
       console.error("iFLYTEK evaluateSpeech error:", err.response?.data || err.message);
