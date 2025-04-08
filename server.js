@@ -9,13 +9,13 @@ process.on('exit', (code) => {
 
 const express = require('express');
 const WebSocket = require('ws');
-const { IFLYTEK } = require('./iflytek-speech'); // ✅ 確保是相對路徑
+const { IFLYTEK } = require('./iflytek-speech');
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 app.use(cors({
-  origin: '*', // ✅ 加入 CORS，允許所有來源連線
+  origin: '*', // ✅ CORS 設定
 }));
 
 // 健康檢查端點
@@ -23,7 +23,6 @@ app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
-// 啟動 HTTP Server
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
@@ -31,7 +30,7 @@ const server = app.listen(port, () => {
 
 // 建立 WebSocket Server
 const wss = new WebSocket.Server({ server });
-console.log("✅ WebSocket server is running."); // ✅ 除錯訊息
+console.log("✅ WebSocket server is running.");
 
 const iflytekClient = new IFLYTEK({
   appId: process.env.IFLYTEK_APP_ID,
@@ -62,12 +61,14 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 捕捉未處理錯誤，防止 server crash
+// 捕捉未處理錯誤
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err);
 });
 process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Unhandled Rejection:', reason);
 });
+
 console.log("🟢 Server 啟動完畢，等待連線中...");
 
+// ✅
