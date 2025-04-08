@@ -1,4 +1,12 @@
 // server.js
+process.on('beforeExit', (code) => {
+  console.log(`⚠️ process beforeExit event with code: ${code}`);
+});
+
+process.on('exit', (code) => {
+  console.log(`⚠️ process exit event with code: ${code}`);
+});
+
 const express = require('express');
 const WebSocket = require('ws');
 const { IFLYTEK } = require('./iflytek-speech'); // ✅ 確保是相對路徑
@@ -61,3 +69,5 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Unhandled Rejection:', reason);
 });
+console.log("🟢 Server 啟動完畢，等待連線中...");
+
