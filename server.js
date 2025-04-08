@@ -22,9 +22,10 @@ app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
+// ✅ 修正主機綁定
 const port = process.env.PORT || 3000;
 const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`✅ Server running on port ${port}`);
+  console.log(`✅ Server running on 0.0.0.0:${port}`);
 });
 
 // 建立 WebSocket Server
