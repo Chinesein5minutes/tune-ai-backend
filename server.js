@@ -6,7 +6,9 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*', // ✅ 加入 CORS，允許所有來源連線
+}));
 
 // 健康檢查端點
 app.get('/health', (req, res) => {
