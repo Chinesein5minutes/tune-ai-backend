@@ -1,3 +1,4 @@
+// 捕捉應用結束事件（除錯用途）
 process.on('beforeExit', (code) => {
   console.log(`⚠️ process beforeExit event with code: ${code}`);
 });
@@ -13,31 +14,33 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors({
-  origin: '*', // ✅ CORS 設定
-}));
 
-// 健康檢查端點
+// ✅ CORS 設定：允許所有來源
+app.use(cors({ origin: '*' }));
+
+// ✅ 健康檢查端點（供 Railway / 瀏覽器測試使用）
 app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
-// ✅ 修正主機綁定
+// ✅ 啟動 HTTP Server，綁定 0.0.0.0 是關鍵
 const port = process.env.PORT || 3000;
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
 });
 
-// 建立 WebSocket Server
+// ✅ 建立 WebSocket Server
 const wss = new WebSocket.Server({ server });
 console.log("✅ WebSocket server is running.");
 
+// ✅ 初始化 iFLYTEK 語音評測客戶端
 const iflytekClient = new IFLYTEK({
   appId: process.env.IFLYTEK_APP_ID,
   apiKey: process.env.IFLYTEK_API_KEY,
   apiSecret: process.env.IFLYTEK_API_SECRET,
 });
 
+// ✅ WebSocket 連線處理
 wss.on('connection', (ws) => {
   console.log('🔌 Client connected');
 
@@ -61,7 +64,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 捕捉未處理錯誤
+// ✅ 捕捉未處理錯誤
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err);
 });
