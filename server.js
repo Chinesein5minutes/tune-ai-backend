@@ -1,12 +1,9 @@
-// server.js
 const express = require('express');
 const WebSocket = require('ws');
-const { IFLYTEK } = require('./iflytek-speech'); // ✅ 確保是相對路徑
-const cors = require('cors');
+const { IFLYTEK } = require('./iflytek-speech');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
 
 // 健康檢查端點
 app.get('/health', (req, res) => {
@@ -19,9 +16,9 @@ const server = app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
 });
 
-// 建立 WebSocket Server
+// WebSocket Server
 const wss = new WebSocket.Server({ server });
-console.log("✅ WebSocket server is running."); // ✅ 除錯訊息
+console.log("✅ WebSocket server is running.");
 
 const iflytekClient = new IFLYTEK({
   appId: process.env.IFLYTEK_APP_ID,
@@ -33,7 +30,7 @@ wss.on('connection', (ws) => {
   console.log('🔌 Client connected');
 
   ws.on('message', async (audioData) => {
-    console.log("🎹 收到語音資料，準備送出分析...");
+    console.log("🎙️ 收到語音資料，準備送出分析...");
     try {
       const result = await iflytekClient.evaluateSpeech(audioData, {
         language: 'zh_cn',
@@ -50,12 +47,4 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log('🔌 Client disconnected');
   });
-});
-
-// 捕捉未處理錯誤，防止 server crash
-process.on('uncaughtException', (err) => {
-  console.error('⚠️ Uncaught Exception:', err);
-});
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Unhandled Rejection:', reason);
 });
