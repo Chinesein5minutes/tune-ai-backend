@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const WebSocket = require('ws');
 const { IFLYTEK } = require('./iflytek-speech');
 const cors = require('cors');
@@ -13,17 +14,10 @@ app.get('/health', (req, res) => {
 });
 
 const port = parseInt(process.env.PORT) || 3000;
-const wsPort = port + 1;
+const server = http.createServer(app);
 
-// ✅ 啟動 HTTP Server
-app.listen(port, '0.0.0.0', () => {
-  console.log(`✅ HTTP Server running on 0.0.0.0:${port}`);
-});
-
-// ✅ 啟動獨立 WebSocket Server
-const wss = new WebSocket.Server({ port: wsPort }, () => {
-  console.log(`✅ WebSocket server is running on port ${wsPort}`);
-});
+// ✅ 在 HTTP Server 上掛載 WebSocket
+const wss = new WebSocket.Server({ server });
 
 const iflytekClient = new IFLYTEK({
   appId: process.env.IFLYTEK_APP_ID,
@@ -72,10 +66,15 @@ wss.on('close', () => {
   clearInterval(interval);
 });
 
-// 🛡️ 加入虛擬任務防止 Railway 誤判 container 閒置
-setInterval(() => {}, 1000); // 👈 這一行很關鍵
+// ✅ 啟動 HTTP + WS Server
+server.listen(port, '0.0.0.0', () => {
+  console.log(`✅ Server running on 0.0.0.0:${port}`);
+});
 
-// 捕捉未處理錯誤
+// 保持 Container 存活
+setInterval(() => {}, 1000);
+
+// 捕捉錯誤
 process.on('uncaughtException', (err) => {
   console.error('⚠️ 未捕捉例外:', err);
 });
@@ -83,4 +82,4 @@ process.on('unhandledRejection', (reason, p) => {
   console.error('⚠️ 未處理拒絕:', reason);
 });
 
-console.log("🟢 Server 全面啟動，等待 WebSocket 與 HTTP 連線...");
+console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
