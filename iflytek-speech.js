@@ -1,4 +1,4 @@
-const crypto = require("crypto-js");
+const crypto = require("crypto");
 const axios = require("axios");
 
 class IFLYTEK {
@@ -14,8 +14,8 @@ class IFLYTEK {
     }
 
     const base64Audio = audioData.toString("base64");
-
     const timestamp = Math.floor(Date.now() / 1000);
+
     const param = {
       engine_type: "ise_general",
       aue: "raw",
@@ -25,15 +25,7 @@ class IFLYTEK {
 
     const xParam = Buffer.from(JSON.stringify(param)).toString("base64");
     const checksumRaw = this.apiKey + timestamp + xParam;
-    const checksum = crypto.MD5(checksumRaw).toString();
-
-    // ✅ 印出 Header 組成資訊進行除錯
-    console.log("🧩 Debug iFLYTEK Header 組成：");
-    console.log("X-Appid:", this.appId);
-    console.log("X-CurTime:", timestamp);
-    console.log("X-Param:", xParam);
-    console.log("X-CheckSum 組成字串:", checksumRaw);
-    console.log("X-CheckSum:", checksum);
+    const checksum = crypto.createHash("md5").update(checksumRaw).digest("hex");
 
     const headers = {
       "X-Appid": this.appId,
@@ -51,10 +43,10 @@ class IFLYTEK {
         payload,
         { headers }
       );
-      console.log("📥 iFLYTEK 回應：", response.data);
+      console.log("✅ iFLYTEK 分析成功");
       return response.data;
     } catch (err) {
-      console.error("❌ iFLYTEK evaluateSpeech error:", err.response?.data || err.message);
+      console.error("❌ iFLYTEK API 錯誤：", err.response?.data || err.message || err);
       throw new Error(
         typeof err.response?.data === "string"
           ? err.response.data
