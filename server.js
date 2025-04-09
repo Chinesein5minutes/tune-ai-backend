@@ -92,3 +92,12 @@ console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 
 // ✅ 保持容器不會被 Railway 提前關閉
 setInterval(() => {}, 1000);
+
+// ✅ 自我 ping 避免 idle（Railway hobby 限制）
+setInterval(() => {
+  require("http").get(`http://localhost:${port}/health`, (res) => {
+    console.log("📡 自我 ping health:", res.statusCode);
+  }).on("error", (err) => {
+    console.error("❌ 自我 ping 失敗:", err.message);
+  });
+}, 1000 * 60 * 4); // 每 4 分鐘 ping 一次
