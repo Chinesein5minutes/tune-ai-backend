@@ -16,31 +16,24 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+app.use(cors()); // ✅ 啟用 CORS，讓 Hostinger 前端可跨域連線
 
-// ✅ 修正 CORS 設定（明確允許前端來源）
-app.use(cors({
-  origin: 'https://tune.chinesein5minutes.com',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true,
-}));
-
-// ✅ 根目錄路由 - 給 Railway 檢查是否存活
+// ✅ 健康檢查用的路由
 app.get('/', (req, res) => {
-  console.log('📥 收到 / 預設檢查請求');
+  console.log('📥 收到 / 檢查請求');
   res.send('Hello from TuneAI backend');
 });
 
-// ✅ /health 檢查路由 - 用來配合 UptimeRobot
 app.get('/health', (req, res) => {
   console.log('💓 收到 /health 檢查請求');
   res.send('Server is healthy');
 });
 
+// ✅ 建立 HTTP server
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
-// ✅ 掛載 WebSocket Server
+// ✅ 掛載 WebSocket
 const wss = new WebSocket.Server({ server });
 
 const iflytekClient = new IFLYTEK({
@@ -77,7 +70,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// ✅ 保持 WebSocket 存活
+// ✅ WebSocket 心跳保活
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
@@ -86,25 +79,22 @@ const interval = setInterval(() => {
   });
 }, 30000);
 
-wss.on('close', () => {
-  clearInterval(interval);
-});
+wss.on('close', () => clearInterval(interval));
 
 // ✅ 啟動伺服器
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
+  console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 });
 
-console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
+// ✅ 防止 Railway Container idle 自動關閉
+setInterval(() => {}, 1000); // 最小存活空迴圈
 
-// ✅ 保持容器不會被 Railway 提前關閉
-setInterval(() => {}, 1000);
-
-// ✅ 自我 ping 避免 idle（Railway hobby 限制）
+// ✅ 改為 0.0.0.0 ping 自己，修正 ECONNREFUSED 問題
 setInterval(() => {
-  require("http").get(`http://localhost:${port}/health`, (res) => {
+  http.get(`http://0.0.0.0:${port}/health`, (res) => {
     console.log("📡 自我 ping health:", res.statusCode);
   }).on("error", (err) => {
     console.error("❌ 自我 ping 失敗:", err.message);
   });
-}, 1000 * 60 * 4); // 每 4 分鐘 ping 一次
+}, 1000 * 60 * 4);
