@@ -30,6 +30,12 @@ app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
+// 提供根路由，給 Railway 預設健康檢查使用
+app.get('/', (req, res) => {
+  console.log('📥 收到 / 預設檢查請求');
+  res.send('Hello from TuneAI backend');
+});
+
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
