@@ -1,4 +1,3 @@
-// ✅ 啟動 log 與全域錯誤處理
 console.log("🪵 啟動程式進入第一行");
 
 process.on('uncaughtException', (err) => {
@@ -17,13 +16,18 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ 正確啟用 CORS：支援所有來源、預檢請求
-app.use(cors());
+// ✅ 強化 CORS 設定（支援前端）
+app.use(cors({
+  origin: 'https://tune.chinesein5minutes.com',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
+  credentials: true
+}));
 app.options('*', cors());
 
 app.use(express.json());
 
-// ✅ 健康檢查用的路由
+// ✅ 健康檢查用路由
 app.get('/', (req, res) => {
   console.log('📥 收到 / 檢查請求');
   res.send('Hello from TuneAI backend');
@@ -31,13 +35,13 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   console.log('💓 收到 /health 檢查請求');
+  res.setHeader('Access-Control-Allow-Origin', '*'); // 額外保險
   res.send('Server is healthy');
 });
 
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
-// ✅ 掛載 WebSocket
 const wss = new WebSocket.Server({ server });
 
 const iflytekClient = new IFLYTEK({
@@ -74,7 +78,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// ✅ WebSocket 心跳保活
+// ✅ 保活 WebSocket
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
@@ -85,16 +89,16 @@ const interval = setInterval(() => {
 
 wss.on('close', () => clearInterval(interval));
 
-// ✅ 啟動伺服器
+// ✅ 啟動 Server
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
   console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 });
 
-// ✅ 防止 Railway Container idle 自動關閉
-setInterval(() => {}, 1000); // 最小存活空迴圈
+// ✅ 防止 Container idle
+setInterval(() => {}, 1000);
 
-// ✅ 自我 ping health 避免 Railway 停止
+// ✅ 自我 ping health
 setInterval(() => {
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
     console.log("📡 自我 ping health:", res.statusCode);
