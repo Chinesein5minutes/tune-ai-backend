@@ -1,3 +1,5 @@
+console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
+
 console.log("🪵 啟動程式進入第一行");
 
 process.on('uncaughtException', (err) => {
