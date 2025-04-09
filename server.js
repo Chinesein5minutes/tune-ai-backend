@@ -16,7 +16,14 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors()); // ✅ 啟用 CORS，讓 Hostinger 前端可跨域連線
+
+// ✅ 修正 CORS：允許所有來源並支援預檢請求
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
+}));
+app.options('*', cors()); // 預檢處理
 
 // ✅ 健康檢查用的路由
 app.get('/', (req, res) => {
@@ -29,7 +36,6 @@ app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
-// ✅ 建立 HTTP server
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
@@ -90,7 +96,7 @@ server.listen(port, '0.0.0.0', () => {
 // ✅ 防止 Railway Container idle 自動關閉
 setInterval(() => {}, 1000); // 最小存活空迴圈
 
-// ✅ 改為 0.0.0.0 ping 自己，修正 ECONNREFUSED 問題
+// ✅ 自我 ping health 避免 Railway 停止
 setInterval(() => {
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
     console.log("📡 自我 ping health:", res.statusCode);
