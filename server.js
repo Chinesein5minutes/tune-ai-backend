@@ -1,12 +1,12 @@
+// ✅ 啟動 log 與全域錯誤處理
 console.log("🪵 啟動程式進入第一行");
+
 process.on('uncaughtException', (err) => {
   console.error('❌ uncaughtException:', err.stack || err);
 });
-
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ unhandledRejection:', reason.stack || reason);
 });
-
 
 const express = require('express');
 const http = require('http');
@@ -18,28 +18,22 @@ require('dotenv').config();
 const app = express();
 app.use(cors({ origin: '*' }));
 
-// ✅ 新增首頁路由
-app.get('/', (req, res) => {
-  console.log('🏠 收到 / 首頁請求');
-  res.send('TuneAI backend is up!');
-});
-
-// ✅ 健康檢查，加入 log
-app.get('/health', (req, res) => {
-  console.log('💓 收到 /health 檢查請求');
-  res.send('Server is healthy');
-});
-
-// 提供根路由，給 Railway 預設健康檢查使用
+// ✅ 根目錄路由 - 給 Railway 檢查是否存活
 app.get('/', (req, res) => {
   console.log('📥 收到 / 預設檢查請求');
   res.send('Hello from TuneAI backend');
 });
 
+// ✅ /health 檢查路由 - 用來配合 UptimeRobot
+app.get('/health', (req, res) => {
+  console.log('💓 收到 /health 檢查請求');
+  res.send('Server is healthy');
+});
+
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
-// ✅ 在 HTTP Server 上掛載 WebSocket
+// ✅ 掛載 WebSocket Server
 const wss = new WebSocket.Server({ server });
 
 const iflytekClient = new IFLYTEK({
@@ -76,7 +70,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 🛡️ 保持 WebSocket 存活
+// ✅ 保持 WebSocket 存活
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
@@ -89,20 +83,12 @@ wss.on('close', () => {
   clearInterval(interval);
 });
 
-// ✅ 啟動 HTTP + WS Server
+// ✅ 啟動伺服器
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
 });
 
-// ✅ 保持 Container 存活
-setInterval(() => {}, 1000);
-
-// 捕捉錯誤
-process.on('uncaughtException', (err) => {
-  console.error('⚠️ 未捕捉例外:', err);
-});
-process.on('unhandledRejection', (reason, p) => {
-  console.error('⚠️ 未處理拒絕:', reason);
-});
-
 console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
+
+// ✅ 保持容器不會被 Railway 提前關閉
+setInterval(() => {}, 1000);
