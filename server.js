@@ -29,6 +29,12 @@ const iflytekClient = new IFLYTEK({
 wss.on('connection', (ws) => {
   console.log('🔌 Client connected');
 
+  ws.isAlive = true;
+
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
   ws.on('message', async (audioData) => {
     try {
       console.log("🎙️ 收到語音資料");
@@ -48,7 +54,20 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 保護伺服器不中斷
+// 🛡️ WebSocket 保活機制，定時發送 ping
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (!ws.isAlive) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping(() => {});
+  });
+}, 30000); // 每 30 秒
+
+wss.on('close', () => {
+  clearInterval(interval);
+});
+
+// 捕捉未處理錯誤
 process.on('uncaughtException', (err) => {
   console.error('⚠️ 未捕捉例外:', err);
 });
@@ -57,8 +76,3 @@ process.on('unhandledRejection', (reason, p) => {
 });
 
 console.log("🟢 Server 正常啟動等待連線...");
-
-// 🛡️ 防止 Railway 誤判 container 閒置自動停用
-setInterval(() => {
-  console.log('🔄 保活 ping...');
-}, 1000 * 60 * 4); // 每 4 分鐘 ping 一次
