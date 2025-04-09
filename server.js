@@ -8,6 +8,12 @@ require('dotenv').config();
 const app = express();
 app.use(cors({ origin: '*' }));
 
+// ✅ 新增首頁路由
+app.get('/', (req, res) => {
+  console.log('🏠 收到 / 首頁請求');
+  res.send('TuneAI backend is up!');
+});
+
 // ✅ 健康檢查，加入 log
 app.get('/health', (req, res) => {
   console.log('💓 收到 /health 檢查請求');
