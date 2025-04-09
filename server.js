@@ -17,13 +17,11 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ 修正 CORS：允許所有來源並支援預檢請求
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
-}));
-app.options('*', cors()); // 預檢處理
+// ✅ 正確啟用 CORS：支援所有來源、預檢請求
+app.use(cors());
+app.options('*', cors());
+
+app.use(express.json());
 
 // ✅ 健康檢查用的路由
 app.get('/', (req, res) => {
