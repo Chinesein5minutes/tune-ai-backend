@@ -16,32 +16,31 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ 強化 CORS 設定（支援前端）
+// ✅ 強化版 CORS（允許所有來源，支援 Hostinger、curl、UptimeRobot）
 app.use(cors({
-  origin: 'https://tune.chinesein5minutes.com',
+  origin: (origin, callback) => callback(null, true),
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
-  credentials: true
+  credentials: true,
 }));
 app.options('*', cors());
-
 app.use(express.json());
 
-// ✅ 健康檢查用路由
+// ✅ 健康檢查路由
 app.get('/', (req, res) => {
-  console.log('📥 收到 / 檢查請求');
-  res.send('Hello from TuneAI backend');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.status(200).send('Hello from TuneAI backend');
 });
 
 app.get('/health', (req, res) => {
   console.log('💓 收到 /health 檢查請求');
-  res.setHeader('Access-Control-Allow-Origin', '*'); // 額外保險
-  res.send('Server is healthy');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.status(200).send('Server is healthy');
 });
 
+// ✅ 建立 server 與 WebSocket
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
-
 const wss = new WebSocket.Server({ server });
 
 const iflytekClient = new IFLYTEK({
@@ -52,7 +51,6 @@ const iflytekClient = new IFLYTEK({
 
 wss.on('connection', (ws) => {
   console.log('🔌 WebSocket client connected');
-
   ws.isAlive = true;
 
   ws.on('pong', () => {
@@ -78,7 +76,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// ✅ 保活 WebSocket
+// ✅ WebSocket 保活
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
@@ -89,13 +87,13 @@ const interval = setInterval(() => {
 
 wss.on('close', () => clearInterval(interval));
 
-// ✅ 啟動 Server
+// ✅ 啟動 server
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
   console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 });
 
-// ✅ 防止 Container idle
+// ✅ 防止 idle
 setInterval(() => {}, 1000);
 
 // ✅ 自我 ping health
