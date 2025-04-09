@@ -8,8 +8,9 @@ require('dotenv').config();
 const app = express();
 app.use(cors({ origin: '*' }));
 
-// 健康檢查
+// ✅ 健康檢查，加入 log
 app.get('/health', (req, res) => {
+  console.log('💓 收到 /health 檢查請求');
   res.send('Server is healthy');
 });
 
@@ -71,7 +72,7 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
 });
 
-// 保持 Container 存活
+// ✅ 保持 Container 存活
 setInterval(() => {}, 1000);
 
 // 捕捉錯誤
