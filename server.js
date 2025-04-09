@@ -72,6 +72,9 @@ wss.on('close', () => {
   clearInterval(interval);
 });
 
+// 🛡️ 加入虛擬任務防止 Railway 誤判 container 閒置
+setInterval(() => {}, 1000); // 👈 這一行很關鍵
+
 // 捕捉未處理錯誤
 process.on('uncaughtException', (err) => {
   console.error('⚠️ 未捕捉例外:', err);
