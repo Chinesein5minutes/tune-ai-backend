@@ -12,13 +12,18 @@ app.get('/health', (req, res) => {
   res.send('Server is healthy');
 });
 
-const port = process.env.PORT || 3000;
-const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`✅ Server running on 0.0.0.0:${port}`);
+const port = parseInt(process.env.PORT) || 3000;
+const wsPort = port + 1;
+
+// ✅ 啟動 HTTP Server
+app.listen(port, '0.0.0.0', () => {
+  console.log(`✅ HTTP Server running on 0.0.0.0:${port}`);
 });
 
-const wss = new WebSocket.Server({ server });
-console.log("✅ WebSocket server is running.");
+// ✅ 啟動獨立 WebSocket Server
+const wss = new WebSocket.Server({ port: wsPort }, () => {
+  console.log(`✅ WebSocket server is running on port ${wsPort}`);
+});
 
 const iflytekClient = new IFLYTEK({
   appId: process.env.IFLYTEK_APP_ID,
@@ -27,7 +32,7 @@ const iflytekClient = new IFLYTEK({
 });
 
 wss.on('connection', (ws) => {
-  console.log('🔌 Client connected');
+  console.log('🔌 WebSocket client connected');
 
   ws.isAlive = true;
 
@@ -50,18 +55,18 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log('🔌 Client disconnected');
+    console.log('🔌 WebSocket client disconnected');
   });
 });
 
-// 🛡️ WebSocket 保活機制，定時發送 ping
+// 🛡️ 保持 WebSocket 存活
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
     ws.isAlive = false;
     ws.ping(() => {});
   });
-}, 30000); // 每 30 秒
+}, 30000);
 
 wss.on('close', () => {
   clearInterval(interval);
@@ -75,4 +80,4 @@ process.on('unhandledRejection', (reason, p) => {
   console.error('⚠️ 未處理拒絕:', reason);
 });
 
-console.log("🟢 Server 正常啟動等待連線...");
+console.log("🟢 Server 全面啟動，等待 WebSocket 與 HTTP 連線...");
