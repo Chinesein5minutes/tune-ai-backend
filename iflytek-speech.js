@@ -1,11 +1,3 @@
-process.on('uncaughtException', (err) => {
-  console.error('❌ uncaughtException:', err.stack || err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ unhandledRejection:', reason.stack || reason);
-});
-
 
 const crypto = require("crypto");
 const axios = require("axios");

@@ -1,3 +1,13 @@
+console.log("🪵 啟動程式進入第一行");
+process.on('uncaughtException', (err) => {
+  console.error('❌ uncaughtException:', err.stack || err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ unhandledRejection:', reason.stack || reason);
+});
+
+
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
