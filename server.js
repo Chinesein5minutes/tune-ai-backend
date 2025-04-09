@@ -16,7 +16,14 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors({ origin: '*' }));
+
+// ✅ 修正 CORS 設定（明確允許前端來源）
+app.use(cors({
+  origin: 'https://tune.chinesein5minutes.com',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+  credentials: true,
+}));
 
 // ✅ 根目錄路由 - 給 Railway 檢查是否存活
 app.get('/', (req, res) => {
