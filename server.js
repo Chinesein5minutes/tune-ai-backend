@@ -57,3 +57,8 @@ process.on('unhandledRejection', (reason, p) => {
 });
 
 console.log("🟢 Server 正常啟動等待連線...");
+
+// 🛡️ 防止 Railway 誤判 container 閒置自動停用
+setInterval(() => {
+  console.log('🔄 保活 ping...');
+}, 1000 * 60 * 4); // 每 4 分鐘 ping 一次
