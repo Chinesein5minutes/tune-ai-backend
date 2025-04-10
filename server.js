@@ -1,5 +1,4 @@
 console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
-
 console.log("🪵 啟動程式進入第一行");
 
 process.on('uncaughtException', (err) => {
@@ -66,6 +65,7 @@ wss.on('connection', (ws) => {
         language: 'zh_cn',
         category: 'read_sentence',
       });
+      console.log('📦 iFLYTEK 回傳資料：', result); // ✅ 臨時加的除錯 log
       ws.send(JSON.stringify(result));
     } catch (error) {
       console.error('❌ 語音分析錯誤:', error.message);
