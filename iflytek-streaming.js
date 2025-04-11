@@ -1,85 +1,83 @@
-const crypto = require("crypto");
-const moment = require("moment");
-const WebSocket = require("ws");
-const uuid = require("uuid");
+const crypto = require('crypto');
+const WebSocket = require('ws');
+const moment = require('moment');
+const { v4: uuidv4 } = require('uuid');
 
-class IFLYTEK_Stream {
+class IFLYTEK_WS {
   constructor({ appId, apiKey, apiSecret }) {
     this.appId = appId;
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
+    this.hostUrl = 'wss://ise-api-sg.xf-yun.com/v2/ise';
   }
 
   createAuthUrl() {
-    const host = "ise-api.xfyun.cn";
-    const path = "/v2/open-ise";
-    const date = moment().utc().format("ddd, DD MMM YYYY HH:mm:ss") + " GMT";
-    const signatureOrigin = `host: ${host}\ndate: ${date}\nGET ${path} HTTP/1.1`;
-    const signatureSha = crypto.createHmac("sha256", this.apiSecret)
+    const date = moment().utc().format('ddd, DD MMM YYYY HH:mm:ss') + ' GMT';
+    const signatureOrigin = `host: ise-api-sg.xf-yun.com\ndate: ${date}\nGET /v2/ise HTTP/1.1`;
+    const signatureSha = crypto
+      .createHmac('sha256', this.apiSecret)
       .update(signatureOrigin)
-      .digest("base64");
-    const authorization = Buffer.from(`api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`).toString("base64");
+      .digest('base64');
 
-    return `wss://${host}${path}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=${host}`;
+    const authorizationOrigin = `api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`;
+    const authorization = Buffer.from(authorizationOrigin).toString('base64');
+
+    const url = `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(
+      date
+    )}&host=ise-api-sg.xf-yun.com`;
+    return url;
   }
 
-  evaluate(audioBuffer, options = {}) {
+  evaluateSpeech(audioBuffer) {
     return new Promise((resolve, reject) => {
-      const url = this.createAuthUrl();
-      const ws = new WebSocket(url);
-      const sid = uuid.v4();
+      const ws = new WebSocket(this.createAuthUrl());
 
-      ws.on("open", () => {
-        const commonMsg = {
-          common: {
-            app_id: this.appId
-          },
-          business: {
-            category: options.category || "read_sentence",
-            language: options.language || "zh_cn",
-            rstcd: "utf8",
-            ent: "ise",
-            aus: 1
-          },
+      ws.on('open', () => {
+        const commonParams = {
+          app_id: this.appId,
+        };
+
+        const businessParams = {
+          category: 'read_sentence',
+          language: 'zh_cn',
+          ent: 'ise',
+          aue: 'raw',
+          text: '你好', // 你可以根據需求送入對應 text
+          text_type: 'plain',
+        };
+
+        const frame = {
+          common: commonParams,
+          business: businessParams,
           data: {
             status: 0,
-            format: "audio/L16;rate=16000",
-            encoding: "raw",
-            audio: audioBuffer.toString("base64")
-          }
+            audio: audioBuffer.toString('base64'),
+            encoding: 'raw',
+          },
         };
-        ws.send(JSON.stringify(commonMsg));
 
-        // 結束訊號
-        setTimeout(() => {
-          ws.send(JSON.stringify({
-            data: {
-              status: 2,
-              audio: ""
-            }
-          }));
-        }, 500);
+        ws.send(JSON.stringify(frame));
       });
 
-      let result = "";
-      ws.on("message", (msg) => {
-        const res = JSON.parse(msg);
+      ws.on('message', (data) => {
+        const res = JSON.parse(data);
         if (res.code !== 0) {
-          reject(new Error(res.desc || "iFLYTEK returned error"));
-        } else {
-          if (res.data && res.data.data) {
-            result += res.data.data;
-          }
-          if (res.data && res.data.status === 2) {
-            resolve({ code: 0, data: result });
-            ws.close();
-          }
+          reject(new Error(res.desc || `Error ${res.code}`));
+        } else if (res.data && res.data.status === 2) {
+          resolve(res.data);
+          ws.close();
         }
       });
 
-      ws.on("error", (err) => reject(err));
+      ws.on('error', (err) => {
+        reject(new Error('WebSocket error: ' + err.message));
+      });
+
+      ws.on('close', () => {
+        console.log('WebSocket connection closed');
+      });
     });
   }
 }
 
-module.exports = IFLYTEK_Stream; // ✅ 修正這裡
+module.exports = { IFLYTEK_WS };
