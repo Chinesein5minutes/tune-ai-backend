@@ -90,7 +90,10 @@ server.listen(port, '0.0.0.0', () => {
   console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 });
 
-setInterval(() => {}, 1000);
+setInterval(() => {
+  console.log('⏳ 保持 container 存活中...');
+}, 5000);
+
 
 setInterval(() => {
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
