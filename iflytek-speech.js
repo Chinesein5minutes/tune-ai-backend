@@ -1,4 +1,3 @@
-// ✅ iflytek-speech.js（修正版）
 const crypto = require("crypto");
 const axios = require("axios");
 
@@ -15,7 +14,7 @@ class IFLYTEK {
     }
 
     const base64Audio = audioData.toString("base64");
-    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const timestamp = Math.floor(Date.now() / 1000);
 
     const param = {
       engine_type: "ise_general",
@@ -25,8 +24,8 @@ class IFLYTEK {
     };
 
     const xParam = Buffer.from(JSON.stringify(param)).toString("base64");
-    const rawString = this.apiSecret + timestamp + xParam; // ✅ 使用 apiSecret
-    const checksum = crypto.createHash("md5").update(rawString).digest("hex");
+    const checksumRaw = this.apiSecret + timestamp + xParam; // ✅ 用 apiSecret，不是 apiKey
+    const checksum = crypto.createHash("md5").update(checksumRaw).digest("hex");
 
     const headers = {
       "X-Appid": this.appId,
@@ -38,16 +37,19 @@ class IFLYTEK {
 
     const payload = `audio=${base64Audio}`;
 
+    console.log("🧪 Headers to iFLYTEK:", headers);
+    console.log("🧪 Payload length:", base64Audio.length);
+
     try {
       const response = await axios.post(
         "http://api.xfyun.cn/v1/service/v1/ise",
         payload,
         { headers }
       );
-      console.log("✅ iFLYTEK 分析成功：", response.data);
+      console.log("✅ iFLYTEK 分析成功:", response.data);
       return response.data;
     } catch (err) {
-      console.error("❌ iFLYTEK API 錯誤：", err.response?.data || err.message);
+      console.error("❌ iFLYTEK API 錯誤：", err.response?.data || err.message || err);
       throw new Error(
         typeof err.response?.data === "string"
           ? err.response.data
