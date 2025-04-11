@@ -1,4 +1,3 @@
-// server.js
 console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
 console.log("🪵 啟動程式進入第一行");
 
@@ -12,7 +11,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { IFLYTEK_WS } = require('./iflytek-streaming');
+const { IFLYTEK_WS } = require('./iflytek-streaming'); // ✅ 使用 streaming 模組
 const cors = require('cors');
 require('dotenv').config();
 
@@ -56,13 +55,11 @@ wss.on('connection', (ws) => {
     ws.isAlive = true;
   });
 
-  ws.on('message', async (audioData) => {
+  ws.on('message', async (audioBuffer) => {
+    console.log("🎧 收到語音資料 (WebSocket streaming mode)");
     try {
-      console.log("🎙️ 收到語音資料 (WebSocket streaming mode)");
-      const result = await iflytekClient.send(audioData, {
-        language: 'zh_cn',
-        category: 'read_sentence'
-      });
+      const result = await iflytekClient.evaluateSpeech(audioBuffer);
+      console.log('📦 分析結果:', result);
       ws.send(JSON.stringify(result));
     } catch (error) {
       console.error('❌ 語音分析錯誤:', error.message);
@@ -90,10 +87,7 @@ server.listen(port, '0.0.0.0', () => {
   console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 });
 
-setInterval(() => {
-  console.log('⏳ 保持 container 存活中...');
-}, 5000);
-
+setInterval(() => {}, 1000);
 
 setInterval(() => {
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
