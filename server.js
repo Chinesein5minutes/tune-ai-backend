@@ -1,3 +1,4 @@
+// server.js
 console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
 console.log("🪵 啟動程式進入第一行");
 
@@ -11,13 +12,12 @@ process.on('unhandledRejection', (reason, promise) => {
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { IFLYTEK } = require('./iflytek-speech');
+const { IFLYTEK_WS } = require('./iflytek-streaming');
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 
-// ✅ 強化版 CORS（允許所有來源，支援 Hostinger、curl、UptimeRobot）
 app.use(cors({
   origin: (origin, callback) => callback(null, true),
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -27,7 +27,6 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-// ✅ 健康檢查路由
 app.get('/', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).send('Hello from TuneAI backend');
@@ -39,12 +38,11 @@ app.get('/health', (req, res) => {
   res.status(200).send('Server is healthy');
 });
 
-// ✅ 建立 server 與 WebSocket
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const iflytekClient = new IFLYTEK({
+const iflytekClient = new IFLYTEK_WS({
   appId: process.env.IFLYTEK_APP_ID,
   apiKey: process.env.IFLYTEK_API_KEY,
   apiSecret: process.env.IFLYTEK_API_SECRET,
@@ -60,12 +58,11 @@ wss.on('connection', (ws) => {
 
   ws.on('message', async (audioData) => {
     try {
-      console.log("🎙️ 收到語音資料");
-      const result = await iflytekClient.evaluateSpeech(audioData, {
+      console.log("🎙️ 收到語音資料 (WebSocket streaming mode)");
+      const result = await iflytekClient.send(audioData, {
         language: 'zh_cn',
-        category: 'read_sentence',
+        category: 'read_sentence'
       });
-      console.log('📦 iFLYTEK 回傳資料：', result); // ✅ 臨時加的除錯 log
       ws.send(JSON.stringify(result));
     } catch (error) {
       console.error('❌ 語音分析錯誤:', error.message);
@@ -78,7 +75,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-// ✅ WebSocket 保活
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
@@ -89,16 +85,13 @@ const interval = setInterval(() => {
 
 wss.on('close', () => clearInterval(interval));
 
-// ✅ 啟動 server
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
   console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
 });
 
-// ✅ 防止 idle
 setInterval(() => {}, 1000);
 
-// ✅ 自我 ping health
 setInterval(() => {
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
     console.log("📡 自我 ping health:", res.statusCode);
