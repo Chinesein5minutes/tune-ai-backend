@@ -1,102 +1,85 @@
-// ✅ server.js（建議完整覆蓋）
-console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
-console.log("🪵 啟動程式進入第一行");
+const crypto = require("crypto");
+const moment = require("moment");
+const WebSocket = require("ws");
+const uuid = require("uuid");
 
-process.on('uncaughtException', (err) => {
-  console.error('❌ uncaughtException:', err.stack || err);
-});
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ unhandledRejection:', reason.stack || reason);
-});
+class IFLYTEK_Stream {
+  constructor({ appId, apiKey, apiSecret }) {
+    this.appId = appId;
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+  }
 
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const cors = require('cors');
-const { IFLYTEK_Stream } = require('./iflytek-streaming');
-require('dotenv').config();
+  createAuthUrl() {
+    const host = "ise-api.xfyun.cn";
+    const path = "/v2/open-ise";
+    const date = moment().utc().format("ddd, DD MMM YYYY HH:mm:ss") + " GMT";
+    const signatureOrigin = `host: ${host}\ndate: ${date}\nGET ${path} HTTP/1.1`;
+    const signatureSha = crypto.createHmac("sha256", this.apiSecret)
+      .update(signatureOrigin)
+      .digest("base64");
+    const authorization = Buffer.from(`api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`).toString("base64");
 
-const app = express();
+    return `wss://${host}${path}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=${host}`;
+  }
 
-app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
-  credentials: true,
-}));
-app.options('*', cors());
-app.use(express.json());
+  evaluate(audioBuffer, options = {}) {
+    return new Promise((resolve, reject) => {
+      const url = this.createAuthUrl();
+      const ws = new WebSocket(url);
+      const sid = uuid.v4();
 
-app.get('/', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.status(200).send('Hello from TuneAI backend');
-});
+      ws.on("open", () => {
+        const commonMsg = {
+          common: {
+            app_id: this.appId
+          },
+          business: {
+            category: options.category || "read_sentence",
+            language: options.language || "zh_cn",
+            rstcd: "utf8",
+            ent: "ise",
+            aus: 1
+          },
+          data: {
+            status: 0,
+            format: "audio/L16;rate=16000",
+            encoding: "raw",
+            audio: audioBuffer.toString("base64")
+          }
+        };
+        ws.send(JSON.stringify(commonMsg));
 
-app.get('/health', (req, res) => {
-  console.log('💓 收到 /health 檢查請求');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.status(200).send('Server is healthy');
-});
-
-const port = parseInt(process.env.PORT) || 3000;
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-const iflytekClient = new IFLYTEK_Stream({
-  appId: process.env.IFLYTEK_APP_ID,
-  apiKey: process.env.IFLYTEK_API_KEY,
-  apiSecret: process.env.IFLYTEK_API_SECRET,
-});
-
-wss.on('connection', (ws) => {
-  console.log('🔌 WebSocket client connected');
-  ws.isAlive = true;
-
-  ws.on('pong', () => {
-    ws.isAlive = true;
-  });
-
-  ws.on('message', async (audioData) => {
-    console.log('🎧 收到語音資料 (WebSocket streaming mode)');
-    try {
-      const result = await iflytekClient.send(audioData, {
-        language: 'zh_cn',
-        category: 'read_sentence',
-        text: '你好，歡迎使用 iFLYTEK',
+        // 結束訊號
+        setTimeout(() => {
+          ws.send(JSON.stringify({
+            data: {
+              status: 2,
+              audio: ""
+            }
+          }));
+        }, 500);
       });
-      ws.send(JSON.stringify(result));
-    } catch (error) {
-      console.error('❌ 語音分析錯誤:', error.message);
-      ws.send(JSON.stringify({ error: error.message }));
-    }
-  });
 
-  ws.on('close', () => {
-    console.log('🔌 WebSocket client disconnected');
-  });
-});
+      let result = "";
+      ws.on("message", (msg) => {
+        const res = JSON.parse(msg);
+        if (res.code !== 0) {
+          reject(new Error(res.desc || "iFLYTEK returned error"));
+        } else {
+          if (res.data && res.data.data) {
+            result += res.data.data;
+          }
+          if (res.data && res.data.status === 2) {
+            resolve({ code: 0, data: result });
+            ws.close();
+          }
+        }
+      });
 
-const interval = setInterval(() => {
-  wss.clients.forEach((ws) => {
-    if (!ws.isAlive) return ws.terminate();
-    ws.isAlive = false;
-    ws.ping(() => {});
-  });
-}, 30000);
+      ws.on("error", (err) => reject(err));
+    });
+  }
+}
 
-wss.on('close', () => clearInterval(interval));
-
-server.listen(port, '0.0.0.0', () => {
-  console.log(`✅ Server running on 0.0.0.0:${port}`);
-  console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
-});
-
-setInterval(() => {}, 1000);
-
-setInterval(() => {
-  http.get(`http://0.0.0.0:${port}/health`, (res) => {
-    console.log("📡 自我 ping health:", res.statusCode);
-  }).on("error", (err) => {
-    console.error("❌ 自我 ping 失敗:", err.message);
-  });
-}, 1000 * 60 * 4);
+module.exports = IFLYTEK_Stream; // ✅ 修正這裡
