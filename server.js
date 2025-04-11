@@ -11,7 +11,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { IFLYTEK_WS } = require('./iflytek-streaming'); // ✅ 使用 streaming 模組
+const IFLYTEK_WS = require('./iflytek-streaming'); // ✅ 正確引用方式
 const cors = require('cors');
 require('dotenv').config();
 
@@ -58,7 +58,7 @@ wss.on('connection', (ws) => {
   ws.on('message', async (audioBuffer) => {
     console.log("🎧 收到語音資料 (WebSocket streaming mode)");
     try {
-      const result = await iflytekClient.evaluateSpeech(audioBuffer);
+      const result = await iflytekClient.evaluate(audioBuffer);
       console.log('📦 分析結果:', result);
       ws.send(JSON.stringify(result));
     } catch (error) {
