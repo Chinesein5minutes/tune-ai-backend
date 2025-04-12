@@ -32,8 +32,8 @@ class IFLYTEK_WS {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.createAuthUrl());
 
-      const inputText = options.text || '你好'; // ✅ 改為從 options.text 傳入，前端需傳 text
-      const engineType = options.engine_type || 'ise_general';
+      const inputText = options.text || '你好';
+      const engineType = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
       const aue = 'raw';
@@ -47,14 +47,15 @@ class IFLYTEK_WS {
             language,
             category,
             ent: engineType,
+            aue,
             text: inputText,
-            text_type: 'plain',
-            aue
+            text_type: 'plain'
           },
           data: {
             status: 0,
-            audio: audioBuffer.toString('base64'),
-            encoding: 'raw'
+            format: 'audio/L16;rate=16000',
+            encoding: 'raw',
+            audio: audioBuffer.toString('base64')
           }
         };
 
