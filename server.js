@@ -11,7 +11,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { IFLYTEK_WS } = require('./iflytek-streaming'); // ✅ 正確解構方式
+const { IFLYTEK_WS } = require('./iflytek-streaming');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -55,12 +55,30 @@ wss.on('connection', (ws) => {
     ws.isAlive = true;
   });
 
-  ws.on('message', async (audioBuffer) => {
+  ws.on('message', async (rawData) => {
     console.log("🎧 收到語音資料 (WebSocket streaming mode)");
+
     try {
-      const result = await iflytekClient.evaluateSpeech(audioBuffer); // ✅ 使用正確方法名
+      const parsed = JSON.parse(rawData);
+      const { audio, text } = parsed;
+
+      if (!audio || !text) {
+        ws.send(JSON.stringify({ error: 'Missing audio or text' }));
+        return;
+      }
+
+      const audioBuffer = Buffer.from(audio, 'base64');
+
+      const result = await iflytekClient.evaluate(audioBuffer, {
+        text: text,
+        language: 'zh_cn',
+        category: 'read_sentence',
+        engine_type: 'ise_general',
+      });
+
       console.log('📦 分析結果:', result);
       ws.send(JSON.stringify(result));
+
     } catch (error) {
       console.error('❌ 語音分析錯誤:', error.message);
       ws.send(JSON.stringify({ error: error.message }));

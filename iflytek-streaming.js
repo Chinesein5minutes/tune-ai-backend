@@ -28,40 +28,44 @@ class IFLYTEK_WS {
     return url;
   }
 
-  evaluateSpeech(audioBuffer) {
+  evaluate(audioBuffer, options = {}) {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.createAuthUrl());
 
+      const inputText = options.text || '你好'; // ✅ 改為從 options.text 傳入，前端需傳 text
+      const engineType = options.engine_type || 'ise_general';
+      const language = options.language || 'zh_cn';
+      const category = options.category || 'read_sentence';
+      const aue = 'raw';
+
       ws.on('open', () => {
-        const commonParams = {
-          app_id: this.appId,
-        };
-
-        const businessParams = {
-          category: 'read_sentence',
-          language: 'zh_cn',
-          ent: 'ise',
-          aue: 'raw',
-          text: '你好', // 你可以根據需求送入對應 text
-          text_type: 'plain',
-        };
-
         const frame = {
-          common: commonParams,
-          business: businessParams,
+          common: {
+            app_id: this.appId
+          },
+          business: {
+            language,
+            category,
+            ent: engineType,
+            text: inputText,
+            text_type: 'plain',
+            aue
+          },
           data: {
             status: 0,
             audio: audioBuffer.toString('base64'),
-            encoding: 'raw',
-          },
+            encoding: 'raw'
+          }
         };
 
+        console.log("🚀 發送初始請求給 iFLYTEK WebSocket...");
         ws.send(JSON.stringify(frame));
       });
 
       ws.on('message', (data) => {
         const res = JSON.parse(data);
         if (res.code !== 0) {
+          console.error("❌ WebSocket 返回錯誤：", res);
           reject(new Error(res.desc || `Error ${res.code}`));
         } else if (res.data && res.data.status === 2) {
           resolve(res.data);
@@ -74,10 +78,10 @@ class IFLYTEK_WS {
       });
 
       ws.on('close', () => {
-        console.log('WebSocket connection closed');
+        console.log('🔌 WebSocket connection closed');
       });
     });
   }
 }
 
-module.exports = { IFLYTEK_WS };
+module.exports = IFLYTEK_WS;
