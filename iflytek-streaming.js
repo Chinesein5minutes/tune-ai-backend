@@ -21,11 +21,7 @@ class IFLYTEK_WS {
     const authorizationOrigin = `api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`;
     const authorization = Buffer.from(authorizationOrigin).toString('base64');
 
-    const url = `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(
-      date
-    )}&host=ise-api-sg.xf-yun.com`;
-
-    return url;
+    return `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=ise-api-sg.xf-yun.com`;
   }
 
   evaluate(audioBuffer, options = {}) {
@@ -40,20 +36,21 @@ class IFLYTEK_WS {
       ws.on('open', () => {
         const initFrame = {
           common: {
-            app_id: this.appId
+            app_id: this.appId,
           },
           business: {
             language,
             category,
             ent: engineType,
             aue: 'raw',
-            text: inputText
+            text: inputText,
+            text_type: 'plain', // ❗❗❗ 這是必需欄位
           },
           data: {
             status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64')
+            audio: audioBuffer.toString('base64'), // ❗❗❗ 這裡是正確位置
           }
         };
 
