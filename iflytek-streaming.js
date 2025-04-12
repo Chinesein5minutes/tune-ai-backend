@@ -28,10 +28,12 @@ class IFLYTEK_WS {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.createAuthUrl());
 
-      const inputText = options.text || '你好';
+      const inputText = options.text;
       const engineType = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
+
+      let sid = '';
 
       ws.on('open', () => {
         const initFrame = {
@@ -44,26 +46,57 @@ class IFLYTEK_WS {
             ent: engineType,
             aue: 'raw',
             text: inputText,
-            text_type: 'plain', // ❗❗❗ 這是必需欄位
           },
           data: {
             status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64'), // ❗❗❗ 這裡是正確位置
-          }
+            audio: audioBuffer.slice(0, 1280).toString('base64'),
+          },
         };
 
-        console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
+        console.log('🚀 發送初始設定 frame 給 iFLYTEK WebSocket...');
         ws.send(JSON.stringify(initFrame));
+
+        // 模擬分段傳送 audio buffer
+        let offset = 1280;
+        const chunkSize = 1280;
+        const interval = setInterval(() => {
+          if (offset >= audioBuffer.length) {
+            // 最後結束訊號
+            const endFrame = {
+              data: {
+                status: 2,
+                audio: '',
+              },
+            };
+            ws.send(JSON.stringify(endFrame));
+            clearInterval(interval);
+            return;
+          }
+
+          const chunk = audioBuffer.slice(offset, offset + chunkSize);
+          const frame = {
+            data: {
+              status: 1,
+              format: 'audio/L16;rate=16000',
+              encoding: 'raw',
+              audio: chunk.toString('base64'),
+            },
+          };
+          ws.send(JSON.stringify(frame));
+          offset += chunkSize;
+        }, 40); // 每 40ms 傳一次 chunk
       });
 
       ws.on('message', (data) => {
         const res = JSON.parse(data);
+        sid = res.sid || '';
         if (res.code !== 0) {
           console.error('❌ WebSocket 返回錯誤：', res);
           reject(new Error(res.message || `Error ${res.code}`));
         } else if (res.data && res.data.status === 2) {
+          console.log('✅ 收到最終分析結果');
           resolve(res.data);
           ws.close();
         }
@@ -74,7 +107,7 @@ class IFLYTEK_WS {
       });
 
       ws.on('close', () => {
-        console.log('🔌 WebSocket connection closed');
+        console.log(`🔌 WebSocket connection closed (sid: ${sid})`);
       });
     });
   }
