@@ -84,4 +84,4 @@ class IFLYTEK_WS {
   }
 }
 
-module.exports = IFLYTEK_WS;
+module.exports = { IFLYTEK_WS };
