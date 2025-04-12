@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const WebSocket = require('ws');
 const moment = require('moment');
-const { v4: uuidv4 } = require('uuid');
 
 class IFLYTEK_WS {
   constructor({ appId, apiKey, apiSecret }) {
@@ -25,6 +24,7 @@ class IFLYTEK_WS {
     const url = `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(
       date
     )}&host=ise-api-sg.xf-yun.com`;
+
     return url;
   }
 
@@ -36,10 +36,9 @@ class IFLYTEK_WS {
       const engineType = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
-      const aue = 'raw';
 
       ws.on('open', () => {
-        const frame = {
+        const initFrame = {
           common: {
             app_id: this.appId
           },
@@ -47,9 +46,8 @@ class IFLYTEK_WS {
             language,
             category,
             ent: engineType,
-            aue,
-            text: inputText,
-            text_type: 'plain'
+            aue: 'raw',
+            text: inputText
           },
           data: {
             status: 0,
@@ -60,14 +58,14 @@ class IFLYTEK_WS {
         };
 
         console.log("🚀 發送初始請求給 iFLYTEK WebSocket...");
-        ws.send(JSON.stringify(frame));
+        ws.send(JSON.stringify(initFrame));
       });
 
       ws.on('message', (data) => {
         const res = JSON.parse(data);
         if (res.code !== 0) {
-          console.error("❌ WebSocket 返回錯誤：", res);
-          reject(new Error(res.desc || `Error ${res.code}`));
+          console.error('❌ WebSocket 返回錯誤：', res);
+          reject(new Error(res.message || `Error ${res.code}`));
         } else if (res.data && res.data.status === 2) {
           resolve(res.data);
           ws.close();
