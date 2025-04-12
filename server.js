@@ -55,22 +55,19 @@ wss.on('connection', (ws) => {
     ws.isAlive = true;
   });
 
-  ws.on('message', async (rawData) => {
-    console.log("🎧 收到語音資料 (WebSocket streaming mode)");
-
+  ws.on('message', async (msg) => {
     try {
-      const parsed = JSON.parse(rawData);
-      const { audio, text } = parsed;
+      const { audio, text } = JSON.parse(msg);
 
-      if (!audio || !text) {
-        ws.send(JSON.stringify({ error: 'Missing audio or text' }));
-        return;
+      if (!audio || !text || typeof text !== 'string' || text.trim() === '') {
+        return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      const audioBuffer = Buffer.from(audio, 'base64');
+      const audioBuffer = Buffer.from(Object.values(audio));
 
+      console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)");
       const result = await iflytekClient.evaluate(audioBuffer, {
-        text: text,
+        text,
         language: 'zh_cn',
         category: 'read_sentence',
         engine_type: 'ise_general',
@@ -78,7 +75,6 @@ wss.on('connection', (ws) => {
 
       console.log('📦 分析結果:', result);
       ws.send(JSON.stringify(result));
-
     } catch (error) {
       console.error('❌ 語音分析錯誤:', error.message);
       ws.send(JSON.stringify({ error: error.message }));
