@@ -47,26 +47,26 @@ class IFLYTEK_WS {
 
         const frame = {
           common: {
-            app_id: this.appId
+            app_id: this.appId,
           },
           business: {
             language,
             category,
             ent: engineType,
-            aue: 'raw'
+            aue: 'raw',
+            text: inputText,
+            text_type: 'plain'
           },
           data: {
             status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            text: inputText,
-            text_type: 'plain',
             audio: finalBuffer.toString('base64')
           }
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        console.log('📦 發送內容：', JSON.stringify(frame, null, 2));
+        console.log('📦 發送內容 JSON 結構:', JSON.stringify(frame, null, 2));
         ws.send(JSON.stringify(frame));
       });
 
