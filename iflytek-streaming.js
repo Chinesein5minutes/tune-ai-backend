@@ -24,44 +24,39 @@ class IFLYTEK_WS {
     return `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=ise-api-sg.xf-yun.com`;
   }
 
-  evaluate(audioBuffer, options = {}) {
+  evaluate({ audio, text }) {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.createAuthUrl());
 
-      const inputText = options.text || '你好';
-      const engineType = options.engine_type || 'ise';
-      const language = options.language || 'zh_cn';
-      const category = options.category || 'read_sentence';
-
       ws.on('open', () => {
-        const initFrame = {
+        const payload = {
           common: {
             app_id: this.appId,
           },
           business: {
-            language,
-            category,
-            ent: engineType,
+            language: 'zh_cn',
+            category: 'read_sentence',
+            ent: 'ise',
             aue: 'raw',
-            text: inputText,
-            text_type: 'plain', // ✅ 必要欄位
+            text,
+            text_type: 'plain',
           },
           data: {
-            status: 2, // ✅ 對於一次性發送整包音訊，status 需設為 2
+            status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: Buffer.from(audioBuffer).toString('base64'),
+            audio: Buffer.from(audio).toString('base64'),
           }
         };
 
-        console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        ws.send(JSON.stringify(initFrame));
+        console.log('🚀 發送格式化資料給 iFLYTEK WebSocket...');
+        ws.send(JSON.stringify(payload));
       });
 
       ws.on('message', (data) => {
         const res = JSON.parse(data);
         if (res.code !== 0) {
-          console.error('❌ WebSocket 返回錯誤：', res);
+          console.error('❌ 錯誤回應：', res);
           reject(new Error(res.message || `Error ${res.code}`));
         } else if (res.data && res.data.status === 2) {
           resolve(res.data);
