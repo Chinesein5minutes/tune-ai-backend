@@ -53,14 +53,14 @@ class IFLYTEK_WS {
             language,
             category,
             ent: engineType,
-            aue: 'raw',
-            text: inputText,
-            text_type: 'plain'
+            aue: 'raw'
           },
           data: {
             status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
+            text: inputText,
+            text_type: 'plain',
             audio: finalBuffer.toString('base64')
           }
         };
