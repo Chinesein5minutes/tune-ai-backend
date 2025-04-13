@@ -57,15 +57,23 @@ wss.on('connection', (ws) => {
 
   ws.on('message', async (msg) => {
     try {
-      const { audio, text } = JSON.parse(msg);
+      const payload = JSON.parse(msg);
+      const { audio, text } = payload;
 
       if (!audio || !text || typeof text !== 'string' || text.trim() === '') {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      const audioBuffer = Buffer.from(Object.values(audio));
-      console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)");
+      let audioBuffer;
+      if (audio instanceof Object && audio.type === 'Buffer' && Array.isArray(audio.data)) {
+        audioBuffer = Buffer.from(audio.data);
+      } else if (audio instanceof Uint8Array || Array.isArray(audio)) {
+        audioBuffer = Buffer.from(audio);
+      } else {
+        return ws.send(JSON.stringify({ error: '❗無法辨識的音訊格式（後端處理失敗）' }));
+      }
 
+      console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
       const result = await iflytekClient.evaluate(audioBuffer, {
         text,
         language: 'zh_cn',
@@ -76,8 +84,8 @@ wss.on('connection', (ws) => {
       console.log('📦 分析結果:', result);
       ws.send(JSON.stringify(result));
     } catch (error) {
-      console.error('❌ 語音分析錯誤:', error.stack || error.message);
-      ws.send(JSON.stringify({ error: error.message || '分析過程發生錯誤' }));
+      console.error('❌ 語音分析錯誤:', error.message);
+      ws.send(JSON.stringify({ error: error.message }));
     }
   });
 
