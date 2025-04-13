@@ -29,7 +29,7 @@ class IFLYTEK_WS {
       const ws = new WebSocket(this.createAuthUrl());
 
       const inputText = options.text || '你好';
-      const engineType = options.engine_type || 'ise_general';
+      const engineType = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
 
@@ -47,20 +47,20 @@ class IFLYTEK_WS {
 
         const frame = {
           common: {
-            app_id: this.appId
+            app_id: this.appId,
           },
           business: {
             language,
             category,
             ent: engineType,
-            aue: 'raw'
+            aue: 'raw',
+            text: inputText,
+            text_type: 'plain'
           },
           data: {
             status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            text: inputText,
-            text_type: 'plain',
             audio: finalBuffer.toString('base64')
           }
         };
