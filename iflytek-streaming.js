@@ -43,13 +43,14 @@ class IFLYTEK_WS {
             category,
             ent: engineType,
             aue: 'raw',
-            text: inputText
+            text: inputText,
+            text_type: 'plain', // ✅ 必要欄位
           },
           data: {
-            status: 0,
+            status: 2, // ✅ 對於一次性發送整包音訊，status 需設為 2
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64')
+            audio: audioBuffer.toString('base64'),
           }
         };
 
