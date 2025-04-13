@@ -59,7 +59,7 @@ wss.on('connection', (ws) => {
     try {
       const { audio, text } = JSON.parse(msg);
 
-      if (!audio || !text || typeof text !== 'string' || text.trim() === '') {
+      if (!audio || !text || typeof text !== 'string') {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
@@ -76,7 +76,7 @@ wss.on('connection', (ws) => {
       console.log('📦 分析結果:', result);
       ws.send(JSON.stringify(result));
     } catch (error) {
-      console.error('❌ 語音分析錯誤:', error.stack || error.message);
+      console.error('❌ 語音分析錯誤:', error.message);
       ws.send(JSON.stringify({ error: error.message }));
     }
   });
