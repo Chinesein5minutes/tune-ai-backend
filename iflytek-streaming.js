@@ -34,7 +34,6 @@ class IFLYTEK_WS {
       const category = options.category || 'read_sentence';
 
       ws.on('open', () => {
-        // 🧼 audioBuffer 檢查與轉換（轉 base64）
         let finalBuffer;
         if (Buffer.isBuffer(audioBuffer)) {
           finalBuffer = audioBuffer;
@@ -46,8 +45,7 @@ class IFLYTEK_WS {
           return reject(new Error('Invalid audio buffer type'));
         }
 
-        // ✅ 發送格式符合 iFLYTEK 官方規範
-        const initFrame = {
+        const frame = {
           common: {
             app_id: this.appId,
           },
@@ -69,7 +67,7 @@ class IFLYTEK_WS {
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
         console.log('📦 發送內容：', JSON.stringify(frame, null, 2));
-        ws.send(JSON.stringify(initFrame));
+        ws.send(JSON.stringify(frame));
       });
 
       ws.on('message', (data) => {
