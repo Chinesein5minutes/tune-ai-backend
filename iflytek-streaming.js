@@ -68,6 +68,7 @@ class IFLYTEK_WS {
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
+        console.log("🧾 實際送出的 JSON 結構:", JSON.stringify(initFrame, null, 2));
         ws.send(JSON.stringify(initFrame));
       });
 
