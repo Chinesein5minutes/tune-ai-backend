@@ -34,6 +34,16 @@ class IFLYTEK_WS {
       const category = options.category || 'read_sentence';
 
       ws.on('open', () => {
+        // ✅ 修正 audioBuffer 檢查與轉換
+        let finalBuffer;
+        if (Buffer.isBuffer(audioBuffer)) {
+          finalBuffer = audioBuffer;
+        } else if (audioBuffer instanceof Uint8Array) {
+          finalBuffer = Buffer.from(audioBuffer);
+        } else {
+          return reject(new Error('Invalid audio buffer type'));
+        }
+
         const initFrame = {
           common: {
             app_id: this.appId,
@@ -47,11 +57,11 @@ class IFLYTEK_WS {
             text_type: 'plain',
           },
           data: {
-            status: 2, // 整包送出直接為 2
+            status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64')
-          }
+            audio: finalBuffer.toString('base64'),
+          },
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
