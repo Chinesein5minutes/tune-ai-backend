@@ -44,40 +44,15 @@ class IFLYTEK_WS {
             ent: engineType,
             aue: 'raw',
             text: inputText,
-            text_type: 'plain', // ✅ 必要欄位
+            text_type: 'plain', // ✅ 這是必要欄位
           },
           data: {
-            status: 2, // ✅ 對於一次性發送整包音訊，status 需設為 2
+            status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64'),
+            audio: audioBuffer.toString('base64') // ✅ base64 編碼音訊資料
           }
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        ws.send(JSON.stringify(initFrame));
-      });
-
-      ws.on('message', (data) => {
-        const res = JSON.parse(data);
-        if (res.code !== 0) {
-          console.error('❌ WebSocket 返回錯誤：', res);
-          reject(new Error(res.message || `Error ${res.code}`));
-        } else if (res.data && res.data.status === 2) {
-          resolve(res.data);
-          ws.close();
-        }
-      });
-
-      ws.on('error', (err) => {
-        reject(new Error('WebSocket error: ' + err.message));
-      });
-
-      ws.on('close', () => {
-        console.log('🔌 WebSocket connection closed');
-      });
-    });
-  }
-}
-
-module.exports = { IFLYTEK_WS };
+        ws.send(JSON.stringify
