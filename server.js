@@ -57,21 +57,14 @@ wss.on('connection', (ws) => {
 
   ws.on('message', async (msg) => {
     try {
-      const payload = JSON.parse(msg);
-      const { audio, text } = payload;
+      const { audio, text } = JSON.parse(msg);
 
       if (!audio || !text || typeof text !== 'string' || text.trim() === '') {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      let audioBuffer;
-      if (audio instanceof Object && audio.type === 'Buffer' && Array.isArray(audio.data)) {
-        audioBuffer = Buffer.from(audio.data);
-      } else if (audio instanceof Uint8Array || Array.isArray(audio)) {
-        audioBuffer = Buffer.from(audio);
-      } else {
-        return ws.send(JSON.stringify({ error: '❗無法辨識的音訊格式（後端處理失敗）' }));
-      }
+      // ✅ 統一處理 WebSocket 傳入的 audio
+      const audioBuffer = new Uint8Array(Object.values(audio));
 
       console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
       const result = await iflytekClient.evaluate(audioBuffer, {

@@ -34,19 +34,20 @@ class IFLYTEK_WS {
       const category = options.category || 'read_sentence';
 
       ws.on('open', () => {
-        // ✅ 修正 audioBuffer 檢查與轉換
         let finalBuffer;
         if (Buffer.isBuffer(audioBuffer)) {
           finalBuffer = audioBuffer;
         } else if (audioBuffer instanceof Uint8Array) {
           finalBuffer = Buffer.from(audioBuffer);
+        } else if (Array.isArray(audioBuffer)) {
+          finalBuffer = Buffer.from(new Uint8Array(audioBuffer));
         } else {
           return reject(new Error('Invalid audio buffer type'));
         }
 
-        const initFrame = {
+        const frame = {
           common: {
-            app_id: this.appId,
+            app_id: this.appId
           },
           business: {
             language,
@@ -54,18 +55,18 @@ class IFLYTEK_WS {
             ent: engineType,
             aue: 'raw',
             text: inputText,
-            text_type: 'plain',
+            text_type: 'plain'
           },
           data: {
             status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: finalBuffer.toString('base64'),
-          },
+            audio: finalBuffer.toString('base64')
+          }
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        ws.send(JSON.stringify(initFrame));
+        ws.send(JSON.stringify(frame));
       });
 
       ws.on('message', (data) => {
