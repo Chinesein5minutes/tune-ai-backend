@@ -63,10 +63,10 @@ wss.on('connection', (ws) => {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      // ✅ 統一處理 WebSocket 傳入的 audio
+      // ✅ 關鍵修正：確保 audio 是正確格式的 Uint8Array
       const audioBuffer = new Uint8Array(Object.values(audio));
+      console.log("🎧 收到語音資料與文字", text, audioBuffer.length);
 
-      console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
       const result = await iflytekClient.evaluate(audioBuffer, {
         text,
         language: 'zh_cn',
