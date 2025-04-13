@@ -47,7 +47,7 @@ class IFLYTEK_WS {
 
         const frame = {
           common: {
-            app_id: this.appId,
+            app_id: this.appId
           },
           business: {
             language,
