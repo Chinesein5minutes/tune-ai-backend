@@ -34,7 +34,18 @@ class IFLYTEK_WS {
       const category = options.category || 'read_sentence';
 
       ws.on('open', () => {
-        const initFrame = {
+        let finalBuffer;
+        if (Buffer.isBuffer(audioBuffer)) {
+          finalBuffer = audioBuffer;
+        } else if (audioBuffer instanceof Uint8Array) {
+          finalBuffer = Buffer.from(audioBuffer);
+        } else if (Array.isArray(audioBuffer)) {
+          finalBuffer = Buffer.from(new Uint8Array(audioBuffer));
+        } else {
+          return reject(new Error('Invalid audio buffer type'));
+        }
+
+        const payload = {
           common: {
             app_id: this.appId,
           },
@@ -43,19 +54,19 @@ class IFLYTEK_WS {
             category,
             ent: engineType,
             aue: 'raw',
-            text: inputText,
-            text_type: 'plain',
+            // ✅ 正確地將要評測的文字放在 business.text，而非另外的欄位
+            text: inputText
           },
           data: {
             status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: Buffer.from(audioBuffer).toString('base64'),
-          },
+            audio: finalBuffer.toString('base64')
+          }
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        ws.send(JSON.stringify(initFrame));
+        ws.send(JSON.stringify(payload));
       });
 
       ws.on('message', (data) => {
