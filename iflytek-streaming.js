@@ -44,13 +44,13 @@ class IFLYTEK_WS {
             ent: engineType,
             aue: 'raw',
             text: inputText,
-            text_type: 'plain'
+            text_type: 'plain',
           },
           data: {
-            status: 2,
+            status: 2, // 整包送出直接為 2
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: Buffer.from(audioBuffer).toString('base64')
+            audio: audioBuffer.toString('base64')
           }
         };
 
