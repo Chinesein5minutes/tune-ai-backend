@@ -29,7 +29,7 @@ class IFLYTEK_WS {
       const ws = new WebSocket(this.createAuthUrl());
 
       const inputText = options.text || '你好';
-      const ent = options.engine_type || 'ise';
+      const engineType = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
 
@@ -41,17 +41,16 @@ class IFLYTEK_WS {
           business: {
             language,
             category,
-            ent,
+            ent: engineType,
             aue: 'raw',
             text: inputText,
-            text_type: 'plain'  // ✅ 要放在 business 裡！
           },
           data: {
             status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64') // ✅ base64 放在 data 裡
-          }
+            audio: audioBuffer.toString('base64'),
+          },
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
