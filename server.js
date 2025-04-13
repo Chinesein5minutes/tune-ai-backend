@@ -63,7 +63,7 @@ wss.on('connection', (ws) => {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      const audioBuffer = new Uint8Array(Object.values(audio));
+      const audioBuffer = Buffer.from(Object.values(audio));
       console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
 
       const result = await iflytekClient.evaluate(audioBuffer, {
