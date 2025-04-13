@@ -43,14 +43,14 @@ class IFLYTEK_WS {
             category,
             ent: engineType,
             aue: 'raw',
-            text: inputText,
+            text: inputText
           },
           data: {
             status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64'),
-          },
+            audio: audioBuffer.toString('base64')
+          }
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
