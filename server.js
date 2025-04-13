@@ -1,5 +1,6 @@
+// ✅ 檢查環境變數與錯誤追蹤
 console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
-console.log("🪵 啟動程式進入第一行");
+console.log("\uD83E\uDEA5 \u555F\u52D5\u7A0B\u5F0F\u9032\u5165\u7B2C\u4E00\u884C");
 
 process.on('uncaughtException', (err) => {
   console.error('❌ uncaughtException:', err.stack || err);
@@ -8,6 +9,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ unhandledRejection:', reason.stack || reason);
 });
 
+// ✅ 基本模組引入
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -15,6 +17,7 @@ const { IFLYTEK_WS } = require('./iflytek-streaming');
 const cors = require('cors');
 require('dotenv').config();
 
+// ✅ Express 與 CORS 設定
 const app = express();
 
 app.use(cors({
@@ -37,6 +40,7 @@ app.get('/health', (req, res) => {
   res.status(200).send('Server is healthy');
 });
 
+// ✅ 建立 HTTP + WebSocket Server
 const port = parseInt(process.env.PORT) || 3000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -63,6 +67,7 @@ wss.on('connection', (ws) => {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
+      // ✅ 修正 audio buffer 處理（Uint8Array 轉 Buffer）
       const audioBuffer = Buffer.from(Object.values(audio));
 
       console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)");
@@ -70,7 +75,7 @@ wss.on('connection', (ws) => {
         text,
         language: 'zh_cn',
         category: 'read_sentence',
-        engine_type: 'ise_general',
+        engine_type: 'ise',
       });
 
       console.log('📦 分析結果:', result);
@@ -86,6 +91,7 @@ wss.on('connection', (ws) => {
   });
 });
 
+// ✅ WebSocket Keep-Alive
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
@@ -96,6 +102,7 @@ const interval = setInterval(() => {
 
 wss.on('close', () => clearInterval(interval));
 
+// ✅ 啟動 server 並執行自我 ping 保活
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
   console.log("🟢 Server 全面啟動，HTTP + WebSocket 等待連線中...");
