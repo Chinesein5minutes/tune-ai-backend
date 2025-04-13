@@ -29,28 +29,28 @@ class IFLYTEK_WS {
       const ws = new WebSocket(this.createAuthUrl());
 
       const inputText = options.text || '你好';
-      const engineType = options.engine_type || 'ise';
+      const ent = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
 
       ws.on('open', () => {
         const initFrame = {
           common: {
-            app_id: this.appId
+            app_id: this.appId,
           },
           business: {
             language,
             category,
-            ent: engineType,
+            ent,
             aue: 'raw',
             text: inputText,
-            text_type: 'plain'
+            text_type: 'plain'  // ✅ 要放在 business 裡！
           },
           data: {
             status: 0,
-            format: 'audio/L16;rate=16000', // ✅ 必須加上 format，不能省略
+            format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            audio: audioBuffer.toString('base64')
+            audio: audioBuffer.toString('base64') // ✅ base64 放在 data 裡
           }
         };
 
