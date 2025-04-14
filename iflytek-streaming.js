@@ -45,7 +45,7 @@ class IFLYTEK_WS {
           return reject(new Error('Invalid audio buffer type'));
         }
 
-        const payload = {
+        const frame = {
           common: {
             app_id: this.appId,
           },
@@ -66,8 +66,8 @@ class IFLYTEK_WS {
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        console.log('📦 發送內容：', JSON.stringify(payload, null, 2));
-        ws.send(JSON.stringify(payload));
+        console.log('📦 發送內容：', JSON.stringify(frame, null, 2));
+        ws.send(JSON.stringify(frame));
       });
 
       ws.on('message', (data) => {
