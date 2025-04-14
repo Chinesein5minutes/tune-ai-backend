@@ -63,7 +63,17 @@ wss.on('connection', (ws) => {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      const audioBuffer = Buffer.from(Object.values(audio));
+      const audioBuffer = (() => {
+        if (audio instanceof Uint8Array) {
+          return audio;
+        } else if (Array.isArray(audio)) {
+          return new Uint8Array(audio);
+        } else if (audio && audio.type === 'Buffer' && Array.isArray(audio.data)) {
+          return new Uint8Array(audio.data);
+        } else {
+          throw new Error('❗無法辨識的音訊格式');
+        }
+      })();
       console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
 
       const result = await iflytekClient.evaluate(audioBuffer, {
