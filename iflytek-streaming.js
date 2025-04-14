@@ -18,7 +18,7 @@ class IFLYTEK_WS {
       .update(signatureOrigin)
       .digest('base64');
 
-    const authorizationOrigin = `api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`;
+    const authorizationOrigin = `api_key=\"${this.apiKey}\", algorithm=\"hmac-sha256\", headers=\"host date request-line\", signature=\"${signatureSha}\"`;
     const authorization = Buffer.from(authorizationOrigin).toString('base64');
 
     return `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=ise-api-sg.xf-yun.com`;
@@ -33,19 +33,19 @@ class IFLYTEK_WS {
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
 
-      ws.on('open', () => {
-        let finalBuffer;
-        if (Buffer.isBuffer(audioBuffer)) {
-          finalBuffer = audioBuffer;
-        } else if (audioBuffer instanceof Uint8Array) {
-          finalBuffer = Buffer.from(audioBuffer);
-        } else if (Array.isArray(audioBuffer)) {
-          finalBuffer = Buffer.from(new Uint8Array(audioBuffer));
-        } else {
-          return reject(new Error('Invalid audio buffer type'));
-        }
+      let audioBase64;
+      if (Buffer.isBuffer(audioBuffer)) {
+        audioBase64 = audioBuffer.toString('base64');
+      } else if (audioBuffer instanceof Uint8Array) {
+        audioBase64 = Buffer.from(audioBuffer).toString('base64');
+      } else if (Array.isArray(audioBuffer)) {
+        audioBase64 = Buffer.from(new Uint8Array(audioBuffer)).toString('base64');
+      } else {
+        return reject(new Error('Invalid audio buffer type'));
+      }
 
-        const frame = {
+      ws.on('open', () => {
+        const initFrame = {
           common: {
             app_id: this.appId,
           },
@@ -53,21 +53,31 @@ class IFLYTEK_WS {
             language,
             category,
             ent: engineType,
-            aue: 'raw',
+            aue: 'raw'
           },
           data: {
-            status: 2,
+            status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
             text: inputText,
-            text_type: 'plain',
-            audio: finalBuffer.toString('base64'),
-          },
+            text_type: 'plain'
+          }
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        console.log('📦 發送內容：', JSON.stringify(frame, null, 2));
-        ws.send(JSON.stringify(frame));
+        ws.send(JSON.stringify(initFrame));
+
+        // 延遲 100ms 再發送音訊資料
+        setTimeout(() => {
+          const audioFrame = {
+            data: {
+              status: 2,
+              audio: audioBase64
+            }
+          };
+          console.log('🎧 發送音訊 frame...');
+          ws.send(JSON.stringify(audioFrame));
+        }, 100);
       });
 
       ws.on('message', (data) => {
