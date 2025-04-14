@@ -61,7 +61,7 @@ class IFLYTEK_WS {
             encoding: 'raw',
             text: inputText,
             text_type: 'plain',
-            audio: finalBuffer.toString('base64'),
+            audio: finalBuffer.toString('base64')
           }
         };
 
