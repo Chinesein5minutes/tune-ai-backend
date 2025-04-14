@@ -61,8 +61,8 @@ class IFLYTEK_WS {
             encoding: 'raw',
             text: inputText,
             text_type: 'plain',
-            audio: finalBuffer.toString('base64')
-          }
+            audio: finalBuffer.toString('base64'),
+          },
         };
 
         console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
