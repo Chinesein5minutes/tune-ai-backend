@@ -18,7 +18,7 @@ class IFLYTEK_WS {
       .update(signatureOrigin)
       .digest('base64');
 
-    const authorizationOrigin = `api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`;
+    const authorizationOrigin = `api_key=\"${this.apiKey}\", algorithm=\"hmac-sha256\", headers=\"host date request-line\", signature=\"${signatureSha}\"`;
     const authorization = Buffer.from(authorizationOrigin).toString('base64');
 
     return `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=ise-api-sg.xf-yun.com`;
@@ -54,19 +54,19 @@ class IFLYTEK_WS {
             category,
             ent: engineType,
             aue: 'raw',
+            text: inputText,
+            text_type: 'plain'
           },
           data: {
             status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
-            text: inputText,
-            text_type: 'plain',
-            audio: finalBuffer.toString('base64'),
-          },
+            audio: finalBuffer.toString('base64')
+          }
         };
 
-        console.log('🚀 發送音訊資料給 iFLYTEK WebSocket');
-        console.log('📦 發送內容 JSON 結構:', JSON.stringify(frame, null, 2));
+        console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
+        console.log('📦 發送內容 JSON 結構：', JSON.stringify(frame, null, 2));
         ws.send(JSON.stringify(frame));
       });
 
