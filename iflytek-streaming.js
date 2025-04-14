@@ -33,49 +33,60 @@ class IFLYTEK_WS {
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
 
-      ws.on('open', () => {
-        let finalBuffer;
-        if (Buffer.isBuffer(audioBuffer)) {
-          finalBuffer = audioBuffer;
-        } else if (audioBuffer instanceof Uint8Array) {
-          finalBuffer = Buffer.from(audioBuffer);
-        } else if (Array.isArray(audioBuffer)) {
-          finalBuffer = Buffer.from(new Uint8Array(audioBuffer));
-        } else {
-          return reject(new Error('Invalid audio buffer type'));
-        }
+      let finalBuffer;
+      if (Buffer.isBuffer(audioBuffer)) {
+        finalBuffer = audioBuffer;
+      } else if (audioBuffer instanceof Uint8Array) {
+        finalBuffer = Buffer.from(audioBuffer);
+      } else if (Array.isArray(audioBuffer)) {
+        finalBuffer = Buffer.from(new Uint8Array(audioBuffer));
+      } else {
+        return reject(new Error('Invalid audio buffer type'));
+      }
 
-        const frame = {
+      ws.on('open', () => {
+        // 1️⃣ 傳送文字 frame
+        const textFrame = {
           common: {
-            app_id: this.appId,
+            app_id: this.appId
           },
           business: {
             language,
             category,
             ent: engineType,
-            aue: 'raw',
+            aue: 'raw'
           },
           data: {
-            status: 2,
-            format: 'audio/L16;rate=16000',
-            encoding: 'raw',
+            status: 0,
             text: inputText,
-            text_type: 'plain',
-            audio: finalBuffer.toString('base64'),
+            text_type: 'plain'
           }
         };
+        console.log('📝 發送文字 frame');
+        ws.send(JSON.stringify(textFrame));
 
-        console.log('🚀 發送初始請求給 iFLYTEK WebSocket...');
-        console.log('📦 發送內容：', JSON.stringify(frame, null, 2));
-        ws.send(JSON.stringify(frame));
+        // 2️⃣ 等待 200ms 傳送音訊 frame
+        setTimeout(() => {
+          const audioFrame = {
+            data: {
+              status: 2,
+              format: 'audio/L16;rate=16000',
+              encoding: 'raw',
+              audio: finalBuffer.toString('base64')
+            }
+          };
+          console.log('🔊 發送音訊 frame');
+          ws.send(JSON.stringify(audioFrame));
+        }, 200);
       });
 
       ws.on('message', (data) => {
         const res = JSON.parse(data);
+        console.log('📥 WebSocket 返回:', res);
         if (res.code !== 0) {
-          console.error('❌ WebSocket 返回錯誤：', res);
-          reject(new Error(res.message || `Error ${res.code}`));
-        } else if (res.data && res.data.status === 2) {
+          return reject(new Error(res.message || `Error ${res.code}`));
+        }
+        if (res.data && res.data.status === 2) {
           resolve(res.data);
           ws.close();
         }
