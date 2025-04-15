@@ -90,13 +90,10 @@ wss.on('connection', (ws) => {
 
     let data;
     try {
-      // 檢查 msg 是否為 Buffer（二進位資料）
-      if (Buffer.isBuffer(msg)) {
-        console.log('📩 訊息為 Buffer，嘗試解析為 JSON');
+      // 檢查 msg 是否為 Buffer 或字串
+      if (Buffer.isBuffer(msg) || typeof msg === 'string') {
+        console.log('📩 訊息為 Buffer 或字串，嘗試解析為 JSON');
         data = JSON.parse(msg.toString());
-      } else if (typeof msg === 'string') {
-        console.log('📩 訊息為字串，直接解析為 JSON');
-        data = JSON.parse(msg);
       } else {
         console.error('❗無法辨識的訊息格式:', typeof msg);
         return ws.send(JSON.stringify({ error: '❗無法辨識的訊息格式' }));
