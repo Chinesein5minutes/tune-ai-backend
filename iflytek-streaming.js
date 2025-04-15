@@ -85,7 +85,7 @@ class IFLYTEK_WS {
         };
 
         console.log('📤 傳送音訊 Frame');
-        setTimeout(() => ws.send(JSON.stringify(audioFrame)), 300);
+        setTimeout(() => ws.send(JSON.stringify(audioFrame)), 700);
       });
 
       ws.on('message', (data) => {
