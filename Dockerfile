@@ -1,8 +1,14 @@
-FROM node:18
+FROM node:18-buster
 
 # 安裝 ffmpeg
 
 RUN apt-get update && apt-get install -y ffmpeg
+
+# 檢查 node 命令是否存在
+
+RUN which node || echo "node not found"
+
+RUN node --version || echo "node version check failed"
 
 # 建立 app 資料夾
 
@@ -16,6 +22,6 @@ COPY . .
 
 RUN npm install
 
-# 啟動 server（前台運行）
+# 啟動 server（使用完整路徑並在前台運行）
 
-CMD \["node", "server.js"\]
+CMD \["sh", "-c", "/usr/local/bin/node server.js"\]
