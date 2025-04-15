@@ -90,7 +90,7 @@ wss.on('connection', (ws) => {
       const { audio, text } = JSON.parse(msg);
       console.log('📋 收到前端資料：', { audio, text });
       console.log('🎙️ audio 類型：', Object.prototype.toString.call(audio));
-      console.log('🎙️ audio 內容：', audio);
+      console.log('🎙️ audio 結構：', JSON.stringify(audio, null, 2));
 
       if (!audio || !text || typeof text !== 'string') {
         console.error('❗請求格式錯誤：audio 或 text 缺失');
@@ -113,10 +113,20 @@ wss.on('connection', (ws) => {
         } else if (audio && Array.isArray(audio.data)) {
           console.log('✅ audio 是物件且有 data 數組，轉為 Uint8Array');
           return new Uint8Array(audio.data);
-        } else {
-          console.error('❗無法辨識的音訊格式');
-          throw new Error('❗無法辨識的音訊格式');
+        } else if (typeof audio === 'string') {
+          console.log('✅ audio 是字串，嘗試解析為 JSON 並提取 data');
+          try {
+            const parsed = JSON.parse(audio);
+            if (parsed && Array.isArray(parsed.data)) {
+              console.log('✅ 解析成功，提取 data 數組');
+              return new Uint8Array(parsed.data);
+            }
+          } catch (e) {
+            console.error('❗無法解析 audio 字串:', e.message);
+          }
         }
+        console.error('❗無法辨識的音訊格式');
+        throw new Error('❗無法辨識的音訊格式');
       })();
 
       console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
