@@ -85,9 +85,24 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('message', async (msg) => {
-    console.log('📩 收到 WebSocket message:', msg.toString());
+    console.log('📩 收到 WebSocket message，原始格式:', typeof msg);
+    console.log('📩 原始訊息內容:', msg.toString());
+
+    let data;
     try {
-      const { audio, text } = JSON.parse(msg);
+      // 檢查 msg 是否為 Buffer（二進位資料）
+      if (Buffer.isBuffer(msg)) {
+        console.log('📩 訊息為 Buffer，嘗試解析為 JSON');
+        data = JSON.parse(msg.toString());
+      } else if (typeof msg === 'string') {
+        console.log('📩 訊息為字串，直接解析為 JSON');
+        data = JSON.parse(msg);
+      } else {
+        console.error('❗無法辨識的訊息格式:', typeof msg);
+        return ws.send(JSON.stringify({ error: '❗無法辨識的訊息格式' }));
+      }
+
+      const { audio, text } = data;
       console.log('📋 收到前端資料：', { audio, text });
       console.log('🎙️ audio 類型：', Object.prototype.toString.call(audio));
       console.log('🎙️ audio 結構：', JSON.stringify(audio, null, 2));
