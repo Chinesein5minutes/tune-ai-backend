@@ -13,6 +13,10 @@ const http = require('http');
 const WebSocket = require('ws');
 const { IFLYTEK_WS } = require('./iflytek-streaming');
 const cors = require('cors');
+const fs = require('fs');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 require('dotenv').config();
 
 const app = express();
@@ -47,6 +51,17 @@ const iflytekClient = new IFLYTEK_WS({
   apiSecret: process.env.IFLYTEK_API_SECRET,
 });
 
+async function convertToPCM(inputBuffer) {
+  const inputPath = 'input.webm';
+  const outputPath = 'output.wav';
+  fs.writeFileSync(inputPath, inputBuffer);
+  await execPromise(`ffmpeg -i ${inputPath} -ar 16000 -ac 1 -f wav ${outputPath}`);
+  const pcmBuffer = fs.readFileSync(outputPath);
+  fs.unlinkSync(inputPath);
+  fs.unlinkSync(outputPath);
+  return pcmBuffer;
+}
+
 wss.on('connection', (ws) => {
   console.log('🔌 WebSocket client connected');
   ws.isAlive = true;
@@ -58,29 +73,43 @@ wss.on('connection', (ws) => {
   ws.on('message', async (msg) => {
     try {
       const { audio, text } = JSON.parse(msg);
+      console.log('收到前端資料：', { audio, text });
+      console.log('audio 類型：', Object.prototype.toString.call(audio));
+      console.log('audio 內容：', audio);
 
       if (!audio || !text || typeof text !== 'string') {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      const audioBuffer = (() => {
+      let audioBuffer = (() => {
         if (audio instanceof Uint8Array) {
           return audio;
         } else if (Array.isArray(audio)) {
           return new Uint8Array(audio);
         } else if (audio && audio.type === 'Buffer' && Array.isArray(audio.data)) {
           return new Uint8Array(audio.data);
+        } else if (audio instanceof ArrayBuffer) {
+          return new Uint8Array(audio);
+        } else if (audio && Array.isArray(audio.data)) {
+          return new Uint8Array(audio.data);
         } else {
           throw new Error('❗無法辨識的音訊格式');
         }
       })();
+
       console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
+
+      // 儲存音訊以除錯
+      fs.writeFileSync('debug.wav', audioBuffer);
+      console.log('已儲存音訊至 debug.wav');
+
+      // 轉換為 PCM 格式
+      audioBuffer = await convertToPCM(audioBuffer);
 
       const result = await iflytekClient.evaluate(audioBuffer, {
         text,
         language: 'zh_cn',
         category: 'read_sentence',
-        engine_type: 'ise_general',
       });
 
       console.log('📦 分析結果:', result);

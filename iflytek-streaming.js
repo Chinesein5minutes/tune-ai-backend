@@ -17,7 +17,7 @@ class IFLYTEK_WS {
       .update(signatureOrigin)
       .digest('base64');
 
-    const authorizationOrigin = `api_key=\"${this.apiKey}\", algorithm=\"hmac-sha256\", headers=\"host date request-line\", signature=\"${signatureSha}\"`;
+    const authorizationOrigin = `api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`;
     const authorization = Buffer.from(authorizationOrigin).toString('base64');
 
     return `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=ise-api-sg.xf-yun.com`;
@@ -30,9 +30,10 @@ class IFLYTEK_WS {
 
       const ws = new WebSocket(this.createAuthUrl());
 
-      const engineType = options.engine_type || 'ise';
       const language = options.language || 'zh_cn';
       const category = options.category || 'read_sentence';
+      const sub = 'ise';
+      const ent = language === 'zh_cn' ? 'cn_vip' : 'en_vip';
 
       let finalBuffer;
       if (Buffer.isBuffer(audioBuffer)) {
@@ -45,20 +46,26 @@ class IFLYTEK_WS {
         return reject(new Error('Invalid audio buffer type'));
       }
 
+      const FRAME_SIZE = 1280;
+      const frames = [];
+      for (let i = 0; i < finalBuffer.length; i += FRAME_SIZE) {
+        frames.push(finalBuffer.slice(i, i + FRAME_SIZE));
+      }
+
       let isFinished = false;
 
       ws.on('open', () => {
         console.log('🚪 WebSocket opened');
 
-        // 第一個 frame：只送文字
-        const textFrame = {
+        const paramFrame = {
           common: {
             app_id: this.appId
           },
           business: {
+            sub,
+            ent,
             language,
             category,
-            ent: engineType,
             aue: 'raw',
             text: Buffer.from(inputText).toString('base64'),
             text_type: 'plain'
@@ -71,27 +78,44 @@ class IFLYTEK_WS {
           }
         };
 
-        console.log('📤 傳送首段文字 Frame');
-        ws.send(JSON.stringify(textFrame));
+        console.log('📤 傳送參數框架');
+        ws.send(JSON.stringify({ cmd: 'ssb', ...paramFrame }));
 
-        // 第二個 frame：傳送音訊（結尾）
-        const audioFrame = {
-          data: {
-            status: 2,
-            format: 'audio/L16;rate=16000',
-            encoding: 'raw',
-            audio: finalBuffer.toString('base64')
+        let frameIndex = 0;
+        const sendFrame = () => {
+          if (frameIndex >= frames.length || isFinished) return;
+
+          const isFirst = frameIndex === 0;
+          const isLast = frameIndex === frames.length - 1;
+
+          const audioFrame = {
+            cmd: 'auw',
+            data: {
+              status: isLast ? 2 : 1,
+              format: 'audio/L16;rate=16000',
+              encoding: 'raw',
+              audio: frames[frameIndex].toString('base64')
+            }
+          };
+
+          audioFrame.aus = isFirst ? 1 : isLast ? 4 : 2;
+
+          console.log(`📤 傳送音訊框架 ${frameIndex + 1}/${frames.length}, aus=${audioFrame.aus}, status=${audioFrame.data.status}`);
+          ws.send(JSON.stringify(audioFrame));
+
+          frameIndex++;
+          if (!isLast) {
+            setTimeout(sendFrame, 40);
           }
         };
 
-        console.log('📤 傳送音訊 Frame');
-        setTimeout(() => ws.send(JSON.stringify(audioFrame)), 700);
+        setTimeout(sendFrame, 300);
       });
 
       ws.on('message', (data) => {
-        const res = JSON.parse(data);
+        const res = JSON.parse(data.toString());
         if (res.code !== 0) {
-          console.error('❌ WebSocket 返回錯誤：', res);
+          console.error('❌ WebSocket 錯誤:', res);
           if (!isFinished) {
             isFinished = true;
             reject(new Error(res.message || `Error ${res.code}`));
