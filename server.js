@@ -22,7 +22,10 @@ require('dotenv').config();
 const app = express();
 
 app.use(cors({
-  origin: (origin, callback) => callback(null, true),
+  origin: (origin, callback) => {
+    console.log('📥 收到 CORS 請求，來源:', origin);
+    callback(null, true);
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
   credentials: true,
@@ -31,6 +34,7 @@ app.options('*', cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
+  console.log('📥 收到 GET / 請求');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).send('Hello from TuneAI backend');
 });
@@ -52,11 +56,20 @@ const iflytekClient = new IFLYTEK_WS({
 });
 
 async function convertToPCM(inputBuffer) {
+  console.log('🔄 開始將音訊轉換為 PCM 格式');
   const inputPath = 'input.webm';
   const outputPath = 'output.wav';
   fs.writeFileSync(inputPath, inputBuffer);
-  await execPromise(`ffmpeg -i ${inputPath} -ar 16000 -ac 1 -f wav ${outputPath}`);
+  console.log('📝 已寫入輸入檔案:', inputPath);
+  try {
+    await execPromise(`ffmpeg -i ${inputPath} -ar 16000 -ac 1 -f wav ${outputPath}`);
+    console.log('✅ ffmpeg 轉換成功，輸出檔案:', outputPath);
+  } catch (error) {
+    console.error('❌ ffmpeg 轉換失敗:', error.message);
+    throw error;
+  }
   const pcmBuffer = fs.readFileSync(outputPath);
+  console.log('📖 已讀取 PCM 檔案，大小:', pcmBuffer.length);
   fs.unlinkSync(inputPath);
   fs.unlinkSync(outputPath);
   return pcmBuffer;
@@ -67,32 +80,41 @@ wss.on('connection', (ws) => {
   ws.isAlive = true;
 
   ws.on('pong', () => {
+    console.log('🏓 收到 WebSocket pong');
     ws.isAlive = true;
   });
 
   ws.on('message', async (msg) => {
+    console.log('📩 收到 WebSocket message:', msg.toString());
     try {
       const { audio, text } = JSON.parse(msg);
-      console.log('收到前端資料：', { audio, text });
-      console.log('audio 類型：', Object.prototype.toString.call(audio));
-      console.log('audio 內容：', audio);
+      console.log('📋 收到前端資料：', { audio, text });
+      console.log('🎙️ audio 類型：', Object.prototype.toString.call(audio));
+      console.log('🎙️ audio 內容：', audio);
 
       if (!audio || !text || typeof text !== 'string') {
+        console.error('❗請求格式錯誤：audio 或 text 缺失');
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
       let audioBuffer = (() => {
         if (audio instanceof Uint8Array) {
+          console.log('✅ audio 是 Uint8Array，直接使用');
           return audio;
         } else if (Array.isArray(audio)) {
+          console.log('✅ audio 是數組，轉為 Uint8Array');
           return new Uint8Array(audio);
         } else if (audio && audio.type === 'Buffer' && Array.isArray(audio.data)) {
+          console.log('✅ audio 是 Buffer 物件，轉為 Uint8Array');
           return new Uint8Array(audio.data);
         } else if (audio instanceof ArrayBuffer) {
+          console.log('✅ audio 是 ArrayBuffer，轉為 Uint8Array');
           return new Uint8Array(audio);
         } else if (audio && Array.isArray(audio.data)) {
+          console.log('✅ audio 是物件且有 data 數組，轉為 Uint8Array');
           return new Uint8Array(audio.data);
         } else {
+          console.error('❗無法辨識的音訊格式');
           throw new Error('❗無法辨識的音訊格式');
         }
       })();
@@ -101,7 +123,7 @@ wss.on('connection', (ws) => {
 
       // 儲存音訊以除錯
       fs.writeFileSync('debug.wav', audioBuffer);
-      console.log('已儲存音訊至 debug.wav');
+      console.log('📝 已儲存音訊至 debug.wav');
 
       // 轉換為 PCM 格式
       audioBuffer = await convertToPCM(audioBuffer);
@@ -123,17 +145,28 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log('🔌 WebSocket client disconnected');
   });
+
+  ws.on('error', (error) => {
+    console.error('❌ WebSocket 錯誤:', error.message);
+  });
 });
 
 const interval = setInterval(() => {
+  console.log('⏲️ 執行 WebSocket 心跳檢查');
   wss.clients.forEach((ws) => {
-    if (!ws.isAlive) return ws.terminate();
+    if (!ws.isAlive) {
+      console.log('🛑 終止不活躍的 WebSocket 客戶端');
+      return ws.terminate();
+    }
     ws.isAlive = false;
     ws.ping(() => {});
   });
 }, 30000);
 
-wss.on('close', () => clearInterval(interval));
+wss.on('close', () => {
+  console.log('🛑 WebSocket 伺服器關閉');
+  clearInterval(interval);
+});
 
 server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on 0.0.0.0:${port}`);
@@ -143,6 +176,7 @@ server.listen(port, '0.0.0.0', () => {
 setInterval(() => {}, 1000);
 
 setInterval(() => {
+  console.log('⏲️ 執行自我健康檢查');
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
     console.log("📡 自我 ping health:", res.statusCode);
   }).on("error", (err) => {
