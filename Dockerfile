@@ -1,5 +1,12 @@
 FROM node:18
 
+# 安裝 ffmpeg
+RUN apt-get update && apt-get install -y ffmpeg
+
+# 檢查 node 命令是否存在
+RUN which node || echo "node not found"
+RUN node --version || echo "node version check failed"
+
 # 建立 app 資料夾
 WORKDIR /app
 
