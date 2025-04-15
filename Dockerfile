@@ -16,6 +16,6 @@ COPY . .
 
 RUN npm install
 
-# 啟動你的 server 並保持前台執行
+# 啟動 server（前台運行）
 
-CMD \["sh", "-c", "node server.js & tail -f /dev/null"\]
+CMD \["node", "server.js"\]
