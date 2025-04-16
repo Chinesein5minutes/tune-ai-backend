@@ -15,9 +15,6 @@ const WebSocket = require('ws');
 const { IFLYTEK_WS } = require('./iflytek-streaming');
 const cors = require('cors');
 const fs = require('fs');
-const { exec } = require('child_process');
-const util = require('util');
-const execPromise = util.promisify(exec);
 require('dotenv').config();
 
 const app = express();
@@ -55,26 +52,6 @@ const iflytekClient = new IFLYTEK_WS({
   apiKey: process.env.IFLYTEK_API_KEY,
   apiSecret: process.env.IFLYTEK_API_SECRET,
 });
-
-async function convertToPCM(inputBuffer) {
-  console.log('🔄 開始將音訊轉換為 PCM 格式');
-  const inputPath = 'input.webm';
-  const outputPath = 'output.pcm';
-  fs.writeFileSync(inputPath, inputBuffer);
-  console.log('📝 已寫入輸入檔案:', inputPath);
-  try {
-    await execPromise(`ffmpeg -i ${inputPath} -f s16le -acodec pcm_s16le -ac 1 -ar 16000 ${outputPath}`);
-    console.log('✅ ffmpeg 轉換成功，輸出檔案:', outputPath);
-  } catch (error) {
-    console.error('❌ ffmpeg 轉換失敗:', error.message);
-    throw error;
-  }
-  const pcmBuffer = fs.readFileSync(outputPath);
-  console.log('📖 已讀取 PCM 檔案，大小:', pcmBuffer.length);
-  fs.unlinkSync(inputPath);
-  fs.unlinkSync(outputPath);
-  return pcmBuffer;
-}
 
 wss.on('connection', (ws) => {
   console.log('🔌 WebSocket client connected');
@@ -121,10 +98,10 @@ wss.on('connection', (ws) => {
         return ws.send(JSON.stringify({ error: '❗audioBuffer 是空的或無效' }));
       }
 
-      fs.writeFileSync('debug.wav', audioBuffer);
-      console.log('📝 已儲存音訊至 debug.wav');
+      fs.writeFileSync('debug.pcm', audioBuffer);
+      console.log('📝 已儲存音訊至 debug.pcm（raw PCM buffer）');
 
-      const pcmBuffer = await convertToPCM(audioBuffer);
+      const pcmBuffer = audioBuffer;
 
       const result = await iflytekClient.evaluate(pcmBuffer, {
         text,
