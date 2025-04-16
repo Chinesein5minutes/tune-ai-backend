@@ -109,6 +109,12 @@ wss.on('connection', (ws) => {
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
+      // 臨時處理：檢查 audio 是否為不正確的字串格式
+      if (typeof audio === 'string' && audio === '[object Uint8Array]') {
+        console.error('❗前端傳輸錯誤：audio 被序列化為字串 "[object Uint8Array]"，應為數組 [0, 1, 2, ...]');
+        return ws.send(JSON.stringify({ error: '❗前端傳輸錯誤：audio 應為數組 [0, 1, 2, ...]，而不是字串 "[object Uint8Array]"' }));
+      }
+
       let audioBuffer = (() => {
         if (audio instanceof Uint8Array) {
           console.log('✅ audio 是 Uint8Array，直接使用');
