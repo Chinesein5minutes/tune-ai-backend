@@ -46,19 +46,10 @@ class IFLYTEK_WS {
         return reject(new Error('Invalid audio buffer type'));
       }
 
-      const FRAME_SIZE = 1280;
-      const frames = [];
-      for (let i = 0; i < finalBuffer.length; i += FRAME_SIZE) {
-        frames.push(finalBuffer.slice(i, i + FRAME_SIZE));
-      }
-
-      let isFinished = false;
-
       ws.on('open', () => {
         console.log('🚪 WebSocket opened');
 
-        const paramFrame = {
-          cmd: 'ssb',
+        const fullFrame = {
           common: {
             app_id: this.appId
           },
@@ -70,48 +61,20 @@ class IFLYTEK_WS {
             aue: 'raw'
           },
           data: {
-            status: 0,
+            status: 2,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
+            audio: finalBuffer.toString('base64'),
             text: Buffer.from(inputText).toString('base64'),
-            text_type: 'plain',
-            audio: ''
+            text_type: 'plain'
           }
         };
 
-        console.log('📤 傳送參數框架');
-        ws.send(JSON.stringify(paramFrame));
-
-        let frameIndex = 0;
-        const sendFrame = () => {
-          if (frameIndex >= frames.length || isFinished) return;
-
-          const isFirst = frameIndex === 0;
-          const isLast = frameIndex === frames.length - 1;
-
-          const audioFrame = {
-            cmd: 'auw',
-            data: {
-              status: isLast ? 2 : 1,
-              format: 'audio/L16;rate=16000',
-              encoding: 'raw',
-              audio: frames[frameIndex].toString('base64')
-            }
-          };
-
-          audioFrame.aus = isFirst ? 1 : isLast ? 4 : 2;
-
-          console.log(`📤 傳送音訊框架 ${frameIndex + 1}/${frames.length}, aus=${audioFrame.aus}, status=${audioFrame.data.status}`);
-          ws.send(JSON.stringify(audioFrame));
-
-          frameIndex++;
-          if (!isLast) {
-            setTimeout(sendFrame, 40);
-          }
-        };
-
-        setTimeout(sendFrame, 300);
+        console.log('📤 傳送一次性音訊與參數框架');
+        ws.send(JSON.stringify(fullFrame));
       });
+
+      let isFinished = false;
 
       ws.on('message', (data) => {
         const res = JSON.parse(data.toString());
