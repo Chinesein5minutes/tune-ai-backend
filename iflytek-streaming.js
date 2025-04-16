@@ -46,10 +46,13 @@ class IFLYTEK_WS {
         return reject(new Error('Invalid audio buffer type'));
       }
 
+      const base64Text = Buffer.from(inputText).toString('base64');
+      const base64Audio = finalBuffer.toString('base64');
+
       ws.on('open', () => {
         console.log('🚪 WebSocket opened');
 
-        const fullFrame = {
+        const initFrame = {
           common: {
             app_id: this.appId
           },
@@ -58,20 +61,31 @@ class IFLYTEK_WS {
             ent,
             language,
             category,
-            aue: 'raw'
+            aue: 'raw',
+            text: base64Text,
+            text_type: 'plain'
           },
           data: {
-            status: 2,
+            status: 0,
             format: 'audio/L16;rate=16000',
-            encoding: 'raw',
-            audio: finalBuffer.toString('base64'),
-            text: Buffer.from(inputText).toString('base64'),
-            text_type: 'plain'
+            encoding: 'raw'
           }
         };
 
-        console.log('📤 傳送一次性音訊與參數框架');
-        ws.send(JSON.stringify(fullFrame));
+        console.log('📤 傳送初始參數 frame');
+        ws.send(JSON.stringify(initFrame));
+
+        setTimeout(() => {
+          const audioFrame = {
+            cmd: 'auw',
+            data: {
+              status: 2,
+              audio: base64Audio
+            }
+          };
+          console.log('📤 傳送音訊 frame（結束）');
+          ws.send(JSON.stringify(audioFrame));
+        }, 200);
       });
 
       let isFinished = false;
