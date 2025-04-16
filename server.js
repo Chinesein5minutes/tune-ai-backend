@@ -1,3 +1,4 @@
+// server.js
 console.log('✅ 檢查環境變數 APP_ID:', process.env.IFLYTEK_APP_ID);
 console.log("🪵 啟動程式進入第一行");
 
@@ -58,11 +59,11 @@ const iflytekClient = new IFLYTEK_WS({
 async function convertToPCM(inputBuffer) {
   console.log('🔄 開始將音訊轉換為 PCM 格式');
   const inputPath = 'input.webm';
-  const outputPath = 'output.wav';
+  const outputPath = 'output.pcm';
   fs.writeFileSync(inputPath, inputBuffer);
   console.log('📝 已寫入輸入檔案:', inputPath);
   try {
-    await execPromise(`ffmpeg -i ${inputPath} -ar 16000 -ac 1 -f wav ${outputPath}`);
+    await execPromise(`ffmpeg -i ${inputPath} -f s16le -acodec pcm_s16le -ac 1 -ar 16000 ${outputPath}`);
     console.log('✅ ffmpeg 轉換成功，輸出檔案:', outputPath);
   } catch (error) {
     console.error('❌ ffmpeg 轉換失敗:', error.message);
@@ -90,102 +91,63 @@ wss.on('connection', (ws) => {
 
     let data;
     try {
-      // 檢查 msg 是否為 Buffer 或字串
-      if (Buffer.isBuffer(msg) || typeof msg === 'string') {
-        console.log('📩 訊息為 Buffer 或字串，嘗試解析為 JSON');
-        data = JSON.parse(msg.toString());
-      } else {
-        console.error('❗無法辨識的訊息格式:', typeof msg);
-        return ws.send(JSON.stringify({ error: '❗無法辨識的訊息格式' }));
-      }
-
+      data = JSON.parse(msg.toString());
       const { audio, text } = data;
-      console.log('📋 收到前端資料：', { audio, text });
-      console.log('🎙️ audio 類型：', Object.prototype.toString.call(audio));
-      console.log('🎙️ audio 結構：', JSON.stringify(audio, null, 2));
 
       if (!audio || !text || typeof text !== 'string') {
-        console.error('❗請求格式錯誤：audio 或 text 缺失');
         return ws.send(JSON.stringify({ error: '❗請求格式錯誤：audio 或 text 缺失' }));
       }
 
-      // 臨時處理：檢查 audio 是否為不正確的字串格式
       if (typeof audio === 'string' && audio === '[object Uint8Array]') {
-        console.error('❗前端傳輸錯誤：audio 被序列化為字串 "[object Uint8Array]"，應為數組 [0, 1, 2, ...]');
-        return ws.send(JSON.stringify({ error: '❗前端傳輸錯誤：audio 應為數組 [0, 1, 2, ...]，而不是字串 "[object Uint8Array]"' }));
+        return ws.send(JSON.stringify({ error: '❗audio 被序列化為字串 "[object Uint8Array]"，請修正前端格式' }));
       }
 
       let audioBuffer = (() => {
-        if (audio instanceof Uint8Array) {
-          console.log('✅ audio 是 Uint8Array，直接使用');
-          return audio;
-        } else if (Array.isArray(audio)) {
-          console.log('✅ audio 是數組，轉為 Uint8Array');
-          return new Uint8Array(audio);
-        } else if (audio && audio.type === 'Buffer' && Array.isArray(audio.data)) {
-          console.log('✅ audio 是 Buffer 物件，轉為 Uint8Array');
-          return new Uint8Array(audio.data);
-        } else if (audio instanceof ArrayBuffer) {
-          console.log('✅ audio 是 ArrayBuffer，轉為 Uint8Array');
-          return new Uint8Array(audio);
-        } else if (audio && Array.isArray(audio.data)) {
-          console.log('✅ audio 是物件且有 data 數組，轉為 Uint8Array');
-          return new Uint8Array(audio.data);
-        } else if (typeof audio === 'string') {
-          console.log('✅ audio 是字串，嘗試解析為 JSON 並提取 data');
+        if (audio instanceof Uint8Array) return audio;
+        if (Array.isArray(audio)) return new Uint8Array(audio);
+        if (audio && audio.type === 'Buffer' && Array.isArray(audio.data)) return new Uint8Array(audio.data);
+        if (audio instanceof ArrayBuffer) return new Uint8Array(audio);
+        if (audio && Array.isArray(audio.data)) return new Uint8Array(audio.data);
+        if (typeof audio === 'string') {
           try {
             const parsed = JSON.parse(audio);
-            if (parsed && Array.isArray(parsed.data)) {
-              console.log('✅ 解析成功，提取 data 數組');
-              return new Uint8Array(parsed.data);
-            }
-          } catch (e) {
-            console.error('❗無法解析 audio 字串:', e.message);
-          }
+            if (parsed && Array.isArray(parsed.data)) return new Uint8Array(parsed.data);
+          } catch (e) {}
         }
-        console.error('❗無法辨識的音訊格式');
         throw new Error('❗無法辨識的音訊格式');
       })();
 
-      console.log("🎧 收到語音資料與文字 (WebSocket streaming mode)", text, audioBuffer.length);
+      if (!(audioBuffer instanceof Uint8Array) || audioBuffer.length === 0) {
+        return ws.send(JSON.stringify({ error: '❗audioBuffer 是空的或無效' }));
+      }
 
-      // 儲存音訊以除錯
       fs.writeFileSync('debug.wav', audioBuffer);
       console.log('📝 已儲存音訊至 debug.wav');
 
-      // 轉換為 PCM 格式
-      audioBuffer = await convertToPCM(audioBuffer);
+      const pcmBuffer = await convertToPCM(audioBuffer);
 
-      const result = await iflytekClient.evaluate(audioBuffer, {
+      const result = await iflytekClient.evaluate(pcmBuffer, {
         text,
         language: 'zh_cn',
         category: 'read_sentence',
       });
 
       console.log('📦 分析結果:', result);
-      ws.send(JSON.stringify(result));
+      ws.send(JSON.stringify({ success: true, result, text }));
     } catch (error) {
       console.error('❌ 語音分析錯誤:', error.message);
       ws.send(JSON.stringify({ error: error.message }));
     }
   });
 
-  ws.on('close', () => {
-    console.log('🔌 WebSocket client disconnected');
-  });
-
-  ws.on('error', (error) => {
-    console.error('❌ WebSocket 錯誤:', error.message);
-  });
+  ws.on('close', () => console.log('🔌 WebSocket client disconnected'));
+  ws.on('error', (err) => console.error('❌ WebSocket 錯誤:', err.message));
 });
 
 const interval = setInterval(() => {
   console.log('⏲️ 執行 WebSocket 心跳檢查');
   wss.clients.forEach((ws) => {
-    if (!ws.isAlive) {
-      console.log('🛑 終止不活躍的 WebSocket 客戶端');
-      return ws.terminate();
-    }
+    if (!ws.isAlive) return ws.terminate();
     ws.isAlive = false;
     ws.ping(() => {});
   });
@@ -202,9 +164,7 @@ server.listen(port, '0.0.0.0', () => {
 });
 
 setInterval(() => {}, 1000);
-
 setInterval(() => {
-  console.log('⏲️ 執行自我健康檢查');
   http.get(`http://0.0.0.0:${port}/health`, (res) => {
     console.log("📡 自我 ping health:", res.statusCode);
   }).on("error", (err) => {

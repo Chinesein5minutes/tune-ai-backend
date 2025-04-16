@@ -58,6 +58,7 @@ class IFLYTEK_WS {
         console.log('🚪 WebSocket opened');
 
         const paramFrame = {
+          cmd: 'ssb',
           common: {
             app_id: this.appId
           },
@@ -66,20 +67,20 @@ class IFLYTEK_WS {
             ent,
             language,
             category,
-            aue: 'raw',
-            text: Buffer.from(inputText).toString('base64'),
-            text_type: 'plain'
+            aue: 'raw'
           },
           data: {
             status: 0,
             format: 'audio/L16;rate=16000',
             encoding: 'raw',
+            text: Buffer.from(inputText).toString('base64'),
+            text_type: 'plain',
             audio: ''
           }
         };
 
         console.log('📤 傳送參數框架');
-        ws.send(JSON.stringify({ cmd: 'ssb', ...paramFrame }));
+        ws.send(JSON.stringify(paramFrame));
 
         let frameIndex = 0;
         const sendFrame = () => {
